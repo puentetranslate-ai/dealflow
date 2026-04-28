@@ -52,6 +52,11 @@ function writeCache(id, series) {
   } catch {}
 }
 
+// Hard ceiling on how long we wait for the proxy. Without a timeout, a
+// hanging fetch leaves the Promise pending forever and the Market tab
+// spinner never resolves. 12s is generous for a server-side CSV fetch.
+const FETCH_TIMEOUT_MS = 12000
+
 async function fetchSeries(id) {
   const cached = readCache(id)
   // Return cached immediately if fresh
@@ -59,8 +64,16 @@ async function fetchSeries(id) {
     return { series: cached.series, fromCache: true, error: null }
   }
 
+  const controller = typeof AbortController !== 'undefined' ? new AbortController() : null
+  const timeoutId = controller
+    ? setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
+    : null
+
   try {
-    const res = await fetch(`${PROXY_BASE}/${encodeURIComponent(id)}`)
+    const res = await fetch(`${PROXY_BASE}/${encodeURIComponent(id)}`, {
+      signal: controller?.signal,
+    })
+    if (timeoutId) clearTimeout(timeoutId)
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     const json = await res.json()
     const series = json.data || []
@@ -68,9 +81,11 @@ async function fetchSeries(id) {
     writeCache(id, series)
     return { series, fromCache: false, error: null }
   } catch (e) {
+    if (timeoutId) clearTimeout(timeoutId)
     // Fall back to stale cache if we have one
     if (cached) return { series: cached.series, fromCache: true, error: null }
-    return { series: [], fromCache: false, error: e.message || 'unavailable' }
+    const reason = e?.name === 'AbortError' ? 'timeout' : (e?.message || 'unavailable')
+    return { series: [], fromCache: false, error: reason }
   }
 }
 

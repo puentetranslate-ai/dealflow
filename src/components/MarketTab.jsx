@@ -27,26 +27,51 @@ export default function MarketTab() {
 
   useEffect(() => {
     let cancelled = false
-    Promise.all([
+
+    // allSettled — never rejects. Combined with a hard timeout below, this
+    // guarantees `loading` always flips to false in bounded time even if
+    // every upstream is dead.
+    Promise.allSettled([
       fetchMortgageRates(),
       fetchFedFundsRate(),
       fetchCaseShiller(),
       fetchUnemployment(),
       supabase.from('deals').select('*').eq('user_id', user.id),
       supabase.from('leads').select('*').eq('user_id', user.id),
-    ]).then(([m30, ff, cs, ur, dealsRes, leadsRes]) => {
+    ]).then((results) => {
       if (cancelled) return
+      const [m30, ff, cs, ur, dealsRes, leadsRes] = results.map((r) =>
+        r.status === 'fulfilled' ? r.value : null
+      )
       setMarket({
         loading: false,
-        mortgage: m30,
-        fedFunds: ff,
-        caseShiller: cs,
-        unemployment: ur,
+        mortgage: m30 || { series: [], error: 'failed' },
+        fedFunds: ff || { series: [], error: 'failed' },
+        caseShiller: cs || { series: [], error: 'failed' },
+        unemployment: ur || { series: [], error: 'failed' },
       })
-      setDeals(dealsRes.data || [])
-      setLeads(leadsRes.data || [])
+      setDeals(dealsRes?.data || [])
+      setLeads(leadsRes?.data || [])
     })
-    return () => { cancelled = true }
+
+    // Belt-and-suspenders: if anything goes really wrong (Promise.allSettled
+    // shouldn't hang, but in case the JS env is broken), force-render the
+    // unavailable state after 15 seconds so the user never sees an
+    // infinite spinner.
+    const safetyId = setTimeout(() => {
+      if (cancelled) return
+      setMarket((m) => m.loading
+        ? {
+            loading: false,
+            mortgage:    { series: [], error: 'timeout' },
+            fedFunds:    { series: [], error: 'timeout' },
+            caseShiller: { series: [], error: 'timeout' },
+            unemployment:{ series: [], error: 'timeout' },
+          }
+        : m)
+    }, 15000)
+
+    return () => { cancelled = true; clearTimeout(safetyId) }
   }, [user.id])
 
   if (market.loading) {
