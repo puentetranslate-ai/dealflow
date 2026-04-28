@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0c1e35" />
+  <title>DealFlow — Real Estate Transaction Management for Agents</title>
+  <meta name="description" content="Mobile-first transaction manager for real estate agents. Track deals, log communications, monitor commissions. 30-day free trial." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            navy: { DEFAULT: '#0c1e35', light: '#1a3456', dark: '#07121f' },
+            gold: { DEFAULT: '#c9a84c', light: '#e2c47a', dark: '#a8882e' },
+            cream: { DEFAULT: '#f7f3ec', dark: '#ede8e0' },
+            muted: '#8a9ab5',
+          },
+          fontFamily: {
+            sans: ['"DM Sans"', 'system-ui', 'sans-serif'],
+            display: ['"Playfair Display"', 'serif'],
+          },
+        },
+      },
+    }
+  </script>
+
+  <style>
+    html { scroll-behavior: smooth; }
+    body { font-family: 'DM Sans', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    h1, h2, h3, h4 { font-family: 'Playfair Display', serif; letter-spacing: -0.01em; }
+    .gold-grid {
+      background-image:
+        linear-gradient(rgba(201,168,76,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(201,168,76,0.04) 1px, transparent 1px);
+      background-size: 32px 32px;
+    }
+    .badge-gold {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(201,168,76,0.1); color: #a8882e;
+      font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+      padding: 4px 12px; border-radius: 999px;
+    }
+    .text-balance { text-wrap: balance; }
+    /* FAQ — hide native disclosure marker */
+    details > summary { list-style: none; cursor: pointer; }
+    details > summary::-webkit-details-marker { display: none; }
+    details[open] .faq-icon { transform: rotate(45deg); background: #c9a84c; color: #0c1e35; }
+    details[open] { border-color: rgba(201,168,76,0.4); background: rgba(201,168,76,0.04); }
+  </style>
+</head>
+<body class="bg-white text-navy">
+
+  <!-- ── Nav ── -->
+  <header class="sticky top-0 z-50 bg-navy text-white border-b border-white/[0.06]">
+    <div class="max-w-7xl mx-auto px-5 md:px-8 h-16 flex items-center justify-between">
+      <a href="#top" class="font-display text-2xl font-bold tracking-tight">
+        Deal<span class="text-gold">Flow</span>
+      </a>
+
+      <div class="hidden md:flex items-center gap-3">
+        <a href="/login" class="border border-white/30 text-white hover:bg-white/[0.06] font-semibold rounded-xl px-5 h-10 flex items-center transition-colors">Sign In</a>
+        <a href="https://buy.stripe.com/cNi14oetl2c75f19853F601" target="_blank" rel="noopener noreferrer" class="bg-gold hover:bg-gold-light text-navy font-semibold rounded-xl px-5 h-10 flex items-center transition-colors">Start Free Trial</a>
+      </div>
+
+      <button id="mobile-menu-btn" aria-label="Toggle menu" class="md:hidden w-10 h-10 -mr-2 flex items-center justify-center text-white/80 hover:text-white">
+        <svg id="icon-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="w-6 h-6"><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></svg>
+        <svg id="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="w-6 h-6 hidden"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+      </button>
+    </div>
+
+    <div id="mobile-menu" class="md:hidden hidden border-t border-white/[0.06] bg-navy">
+      <div class="px-5 py-4 flex flex-col gap-3">
+        <a href="/login" class="border border-white/30 text-white text-center font-semibold rounded-xl px-5 h-12 flex items-center justify-center">Sign In</a>
+        <a href="https://buy.stripe.com/cNi14oetl2c75f19853F601" target="_blank" rel="noopener noreferrer" class="bg-gold text-navy text-center font-semibold rounded-xl px-5 h-12 flex items-center justify-center">Start Free Trial</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── Hero ── -->
+  <section id="top" class="relative bg-navy text-white overflow-hidden gold-grid">
+    <div class="max-w-7xl mx-auto px-5 md:px-8 py-16 md:py-24 grid md:grid-cols-2 gap-12 items-center">
+      <div class="text-center md:text-left">
+        <span class="badge-gold">Now Live — Beta Pricing Available</span>
+        <h1 class="text-4xl md:text-6xl font-bold leading-[1.1] mt-5 text-balance">
+          Every deal. Every client. <span class="text-gold">One screen.</span>
+        </h1>
+        <p class="text-white/70 text-base md:text-lg mt-5 leading-relaxed max-w-xl md:max-w-none mx-auto md:mx-0">
+          DealFlow is the mobile-first transaction manager built exclusively for real estate agents. Replace the chaos of sticky notes, scattered emails, and five disconnected apps with one beautiful tool.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-3 mt-7 sm:items-center justify-center md:justify-start">
+          <a href="https://buy.stripe.com/cNi14oetl2c75f19853F601" target="_blank" rel="noopener noreferrer" class="bg-gold hover:bg-gold-light text-navy font-semibold rounded-xl px-6 h-12 flex items-center justify-center transition-colors">Start Free — 30 Days</a>
+          <a href="#how-it-works" class="border border-white/30 text-white hover:bg-white/[0.06] font-semibold rounded-xl px-6 h-12 flex items-center justify-center transition-colors">See How It Works</a>
+        </div>
+        <div class="mt-6 flex items-center justify-center md:justify-start gap-2 text-white/50 text-xs flex-wrap">
+          <span>No setup fees</span><span>·</span><span>Cancel anytime</span><span>·</span><span>Works on any phone</span>
+        </div>
+      </div>
+
+      <!-- Phone mockup -->
+      <div class="flex justify-center md:justify-end">
+        <div class="relative">
+          <div class="w-[280px] md:w-[320px] aspect-[9/19] bg-navy-dark rounded-[40px] border-4 border-navy-light shadow-2xl overflow-hidden p-1.5">
+            <div class="w-full h-full bg-cream rounded-[32px] overflow-hidden flex flex-col">
+              <div class="h-6 bg-navy flex items-center justify-center">
+                <div class="w-20 h-4 bg-navy-dark rounded-full"></div>
+              </div>
+              <div class="bg-navy text-white px-4 pt-4 pb-3">
+                <p class="text-gold text-[10px] font-bold uppercase tracking-wider">Good morning, Alex</p>
+                <p class="font-display text-base font-bold leading-tight mt-1">You have <span class="text-gold">6</span> deals in play.</p>
+              </div>
+              <div class="bg-cream flex-1 px-3 py-3 space-y-2 overflow-hidden">
+                <div class="bg-white rounded-lg p-2 border-l-2 border-amber-500 shadow-sm">
+                  <p class="text-[10px] font-bold text-navy leading-tight">1247 Bayshore Blvd</p>
+                  <p class="text-[8px] text-amber-700 font-semibold mt-0.5">● Inspection</p>
+                  <p class="text-[8px] text-navy mt-0.5">$585,000</p>
+                </div>
+                <div class="bg-white rounded-lg p-2 border-l-2 border-orange-500 shadow-sm">
+                  <p class="text-[10px] font-bold text-navy leading-tight">3402 W Cypress St</p>
+                  <p class="text-[8px] text-orange-700 font-semibold mt-0.5">● Appraisal</p>
+                  <p class="text-[8px] text-navy mt-0.5">$429,000</p>
+                </div>
+                <div class="bg-white rounded-lg p-2 border-l-2 border-green-500 shadow-sm">
+                  <p class="text-[10px] font-bold text-navy leading-tight">5018 S MacDill Ave</p>
+                  <p class="text-[8px] text-green-700 font-semibold mt-0.5">● Clear to Close</p>
+                  <p class="text-[8px] text-navy mt-0.5">$725,000</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="absolute top-1.5 left-1/2 -translate-x-1/2 w-24 h-5 bg-navy-dark rounded-b-2xl"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Problem ── -->
+  <section class="bg-cream py-16 md:py-24">
+    <div class="max-w-5xl mx-auto px-5 md:px-8">
+      <h2 class="text-3xl md:text-5xl font-bold text-navy text-center text-balance leading-tight">You're running your business out of five apps, sticky notes, and memory.</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-5 mt-12">
+        <div class="bg-navy text-white rounded-2xl p-6 md:p-7"><div class="text-3xl mb-3">📧</div><h3 class="text-lg font-bold leading-tight">Scattered Communications</h3><p class="text-white/70 text-sm mt-2 leading-relaxed">Client emails in Gmail, texts on your phone, call notes on a legal pad. Nothing connects.</p></div>
+        <div class="bg-navy text-white rounded-2xl p-6 md:p-7"><div class="text-3xl mb-3">📋</div><h3 class="text-lg font-bold leading-tight">Missed Deadlines</h3><p class="text-white/70 text-sm mt-2 leading-relaxed">Inspection periods, appraisal deadlines, and contingency dates live in different places. One missed date can kill a deal.</p></div>
+        <div class="bg-navy text-white rounded-2xl p-6 md:p-7"><div class="text-3xl mb-3">🗂️</div><h3 class="text-lg font-bold leading-tight">No Transaction Overview</h3><p class="text-white/70 text-sm mt-2 leading-relaxed">You can't see all your active deals at a glance. You dig through emails just to remember where each one stands.</p></div>
+        <div class="bg-navy text-white rounded-2xl p-6 md:p-7"><div class="text-3xl mb-3">💸</div><h3 class="text-lg font-bold leading-tight">Subscription Fatigue</h3><p class="text-white/70 text-sm mt-2 leading-relaxed">CRMs cost $50–$150 per month and are built for big brokerages — not solo agents who need something simple.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Features ── -->
+  <section id="features" class="bg-white py-16 md:py-24">
+    <div class="max-w-6xl mx-auto px-5 md:px-8">
+      <h2 class="text-3xl md:text-5xl font-bold text-navy text-center text-balance leading-tight">Everything you need — and nothing you don't.</h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mt-12">
+        <div class="rounded-2xl bg-white border border-navy/[0.06] shadow-md p-6 border-t-4 border-t-gold"><div class="text-3xl">🏠</div><h3 class="text-lg font-bold text-navy mt-3 leading-tight">Transaction Dashboard</h3><p class="text-muted text-sm mt-2 leading-relaxed">See every active deal at a glance — phase, price, days in pipeline, and your next critical deadline.</p></div>
+        <div class="rounded-2xl bg-white border border-navy/[0.06] shadow-md p-6 border-t-4 border-t-gold"><div class="text-3xl">💬</div><h3 class="text-lg font-bold text-navy mt-3 leading-tight">Communication Log</h3><p class="text-muted text-sm mt-2 leading-relaxed">Every call, text, and email tied to a deal — logged, timestamped, searchable. Never lose a conversation.</p></div>
+        <div class="rounded-2xl bg-white border border-navy/[0.06] shadow-md p-6 border-t-4 border-t-gold"><div class="text-3xl">✅</div><h3 class="text-lg font-bold text-navy mt-3 leading-tight">Phase-by-Phase Checklists</h3><p class="text-muted text-sm mt-2 leading-relaxed">Pre-built checklists for every stage: Offer → Inspection → Appraisal → Title → Closing.</p></div>
+        <div class="rounded-2xl bg-white border border-navy/[0.06] shadow-md p-6 border-t-4 border-t-gold"><div class="text-3xl">👥</div><h3 class="text-lg font-bold text-navy mt-3 leading-tight">Lead Tracker</h3><p class="text-muted text-sm mt-2 leading-relaxed">Log every prospect, track where they came from, rate them Hot/Warm/Cold, convert to active deals with one tap.</p></div>
+        <div class="rounded-2xl bg-white border border-navy/[0.06] shadow-md p-6 border-t-4 border-t-gold"><div class="text-3xl">💰</div><h3 class="text-lg font-bold text-navy mt-3 leading-tight">Commission Tracker</h3><p class="text-muted text-sm mt-2 leading-relaxed">See pending and earned commission across all deals in real time. Know what's closing and when.</p></div>
+        <div class="rounded-2xl bg-white border border-navy/[0.06] shadow-md p-6 border-t-4 border-t-gold"><div class="text-3xl">👤</div><h3 class="text-lg font-bold text-navy mt-3 leading-tight">Client Directory</h3><p class="text-muted text-sm mt-2 leading-relaxed">Buyer and seller profiles with one-tap call and email. Always one click away.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── How It Works ── -->
+  <section id="how-it-works" class="bg-cream py-16 md:py-24 scroll-mt-20">
+    <div class="max-w-6xl mx-auto px-5 md:px-8">
+      <h2 class="text-3xl md:text-5xl font-bold text-navy text-center text-balance leading-tight">Up and running in minutes.</h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-6 mt-12 relative">
+        <div class="hidden md:block absolute top-8 left-[16.66%] right-[16.66%] h-px bg-gold/30 pointer-events-none"></div>
+        <div class="relative text-center"><div class="mx-auto w-16 h-16 rounded-full bg-cream border-2 border-gold text-gold-dark text-3xl font-bold flex items-center justify-center relative z-10 font-display">1</div><h3 class="text-xl font-bold text-navy mt-4 leading-tight">Sign up</h3><p class="text-muted text-sm mt-2 leading-relaxed max-w-xs mx-auto">Create your account in 30 seconds. No credit card required for the free trial.</p></div>
+        <div class="relative text-center"><div class="mx-auto w-16 h-16 rounded-full bg-cream border-2 border-gold text-gold-dark text-3xl font-bold flex items-center justify-center relative z-10 font-display">2</div><h3 class="text-xl font-bold text-navy mt-4 leading-tight">Add your deals</h3><p class="text-muted text-sm mt-2 leading-relaxed max-w-xs mx-auto">Enter your active transactions. Takes less than 2 minutes per deal.</p></div>
+        <div class="relative text-center"><div class="mx-auto w-16 h-16 rounded-full bg-cream border-2 border-gold text-gold-dark text-3xl font-bold flex items-center justify-center relative z-10 font-display">3</div><h3 class="text-xl font-bold text-navy mt-4 leading-tight">Run your business</h3><p class="text-muted text-sm mt-2 leading-relaxed max-w-xs mx-auto">Log calls, track deadlines, monitor commissions — all from your phone.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Dashboard Preview ── -->
+  <section class="bg-navy py-16 md:py-24 gold-grid">
+    <div class="max-w-6xl mx-auto px-5 md:px-8 text-center">
+      <h2 class="text-3xl md:text-5xl font-bold text-white text-balance leading-tight">See it in action.</h2>
+      <p class="text-white/70 text-base md:text-lg mt-3">Clean. Fast. Built around how agents actually work.</p>
+
+      <div class="mt-12 mx-auto max-w-4xl text-left">
+        <div class="bg-white rounded-t-2xl shadow-2xl overflow-hidden">
+          <div class="bg-cream-dark/50 border-b border-navy/10 px-4 py-2.5 flex items-center gap-2">
+            <span class="w-3 h-3 rounded-full bg-red-400"></span>
+            <span class="w-3 h-3 rounded-full bg-amber-400"></span>
+            <span class="w-3 h-3 rounded-full bg-green-400"></span>
+            <div class="flex-1 mx-4 px-3 py-1 bg-white rounded-md text-xs text-muted text-center">dealflownow.net/dashboard</div>
+          </div>
+          <div class="flex bg-cream">
+            <aside class="hidden md:flex flex-col w-48 lg:w-56 bg-navy text-white py-5 px-4 shrink-0">
+              <p class="font-display text-xl font-bold">Deal<span class="text-gold">Flow</span></p>
+              <p class="text-muted text-[10px] mt-0.5">Agent Workspace</p>
+              <nav class="mt-6 space-y-1 text-xs">
+                <div class="px-3 py-2 rounded-lg bg-white/[0.06] text-white relative"><span class="absolute left-0 top-1.5 bottom-1.5 w-0.5 bg-gold rounded-r"></span>Dashboard</div>
+                <div class="px-3 py-2 text-white/60">Clients</div>
+                <div class="px-3 py-2 text-white/60">Leads</div>
+                <div class="px-3 py-2 text-white/60">Commission</div>
+                <div class="px-3 py-2 text-white/60">Settings</div>
+              </nav>
+            </aside>
+            <main class="flex-1 p-4 md:p-6 min-w-0">
+              <p class="text-muted text-[11px] font-medium">Thursday, April 23 · Good morning, <span class="text-gold-dark font-semibold">Alex</span></p>
+              <h3 class="font-display text-lg md:text-xl font-bold text-navy mt-1">You have <span class="text-gold-dark">6</span> active deals</h3>
+              <div class="grid grid-cols-3 gap-3 mt-4">
+                <div class="bg-white rounded-xl p-3 shadow-sm border border-navy/[0.04]"><p class="text-[9px] font-bold uppercase tracking-wider text-muted">Active Deals</p><p class="font-display text-xl font-bold text-navy mt-1 leading-none">6</p></div>
+                <div class="bg-navy rounded-xl p-3 text-white relative overflow-hidden"><div class="absolute top-0 right-0 w-12 h-12 bg-gold/10 rounded-full -translate-y-4 translate-x-4 pointer-events-none"></div><p class="text-[9px] font-bold uppercase tracking-wider text-gold relative">Pending Commission</p><p class="font-display text-xl font-bold text-gold mt-1 leading-none relative">$38,400</p></div>
+                <div class="bg-white rounded-xl p-3 shadow-sm border border-navy/[0.04]"><p class="text-[9px] font-bold uppercase tracking-wider text-muted">Deadlines This Week</p><p class="font-display text-xl font-bold text-orange-500 mt-1 leading-none">3</p></div>
+              </div>
+              <p class="text-[10px] font-bold uppercase tracking-wider text-muted mt-5 mb-2">Active Transactions</p>
+              <div class="space-y-2">
+                <div class="bg-white rounded-xl p-3 border border-navy/[0.04] shadow-sm flex items-center justify-between gap-3"><div class="min-w-0"><p class="font-display text-sm font-bold text-navy truncate leading-tight">1247 Bayshore Blvd</p><p class="text-[10px] text-muted">Tampa, FL</p></div><div class="hidden sm:flex flex-col items-end gap-1 shrink-0"><span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">● Inspection</span><span class="text-[10px] text-muted">12d active</span></div><p class="font-display text-sm font-bold text-gold-dark whitespace-nowrap shrink-0">$585,000</p></div>
+                <div class="bg-white rounded-xl p-3 border border-navy/[0.04] shadow-sm flex items-center justify-between gap-3"><div class="min-w-0"><p class="font-display text-sm font-bold text-navy truncate leading-tight">3402 W Cypress St</p><p class="text-[10px] text-muted">Tampa, FL</p></div><div class="hidden sm:flex flex-col items-end gap-1 shrink-0"><span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">● Appraisal</span><span class="text-[10px] text-muted">8d active</span></div><p class="font-display text-sm font-bold text-gold-dark whitespace-nowrap shrink-0">$429,000</p></div>
+                <div class="bg-white rounded-xl p-3 border border-navy/[0.04] shadow-sm flex items-center justify-between gap-3"><div class="min-w-0"><p class="font-display text-sm font-bold text-navy truncate leading-tight">5018 S MacDill Ave</p><p class="text-[10px] text-muted">Tampa, FL</p></div><div class="hidden sm:flex flex-col items-end gap-1 shrink-0"><span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700">● Clear to Close</span><span class="text-[10px] text-muted">21d active</span></div><p class="font-display text-sm font-bold text-gold-dark whitespace-nowrap shrink-0">$725,000</p></div>
+              </div>
+            </main>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Pricing ── -->
+  <section id="pricing" class="bg-white py-16 md:py-24 scroll-mt-20">
+    <div class="max-w-6xl mx-auto px-5 md:px-8">
+      <h2 class="text-3xl md:text-5xl font-bold text-navy text-center text-balance leading-tight">Simple, transparent pricing.</h2>
+      <p class="text-muted text-center text-base md:text-lg mt-3">Start free for 30 days. Cancel anytime. No setup fees.</p>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mt-12">
+        <!-- Core -->
+        <div class="relative rounded-2xl p-6 md:p-7 flex flex-col bg-navy text-white shadow-xl ring-2 ring-gold/40">
+          <span class="absolute -top-3 left-1/2 -translate-x-1/2 bg-gold text-navy text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full">Most Popular</span>
+          <h3 class="font-display text-2xl font-bold text-white">Core</h3>
+          <div class="mt-2 flex items-baseline gap-1"><span class="font-display text-4xl font-bold text-gold">$15</span><span class="text-sm text-white/60">/month</span></div>
+          <p class="text-xs mt-1 text-white/60">$100 one-time setup fee</p>
+          <ul class="mt-6 space-y-2.5 text-sm text-white/90">
+            <li class="flex items-start gap-2"><span class="mt-0.5 shrink-0 text-gold">✓</span><span>Unlimited active transactions</span></li>
+            <li class="flex items-start gap-2"><span class="mt-0.5 shrink-0 text-gold">✓</span><span>Phase-by-phase checklists</span></li>
+            <li class="flex items-start gap-2"><span class="mt-0.5 shrink-0 text-gold">✓</span><span>Communication log per deal</span></li>
+            <li class="flex items-start gap-2"><span class="mt-0.5 shrink-0 text-gold">✓</span><span>Lead tracker</span></li>
+            <li class="flex items-start gap-2"><span class="mt-0.5 shrink-0 text-gold">✓</span><span>Commission tracker</span></li>
+            <li class="flex items-start gap-2"><span class="mt-0.5 shrink-0 text-gold">✓</span><span>Client directory</span></li>
+            <li class="flex items-start gap-2"><span class="mt-0.5 shrink-0 text-gold">✓</span><span>PDF export</span></li>
+            <li class="flex items-start gap-2"><span class="mt-0.5 shrink-0 text-gold">✓</span><span>Mobile + desktop</span></li>
+          </ul>
+          <div class="mt-6 pt-6 border-t border-white/10">
+            <a href="https://buy.stripe.com/cNi14oetl2c75f19853F601" target="_blank" rel="noopener noreferrer" class="block text-center bg-gold hover:bg-gold-light text-navy font-semibold rounded-xl px-5 h-12 leading-[3rem] transition-colors">Start Free Trial</a>
+          </div>
+        </div>
+
+        <!-- Pro -->
+        <div class="relative rounded-2xl p-6 md:p-7 flex flex-col bg-white text-navy border border-navy/[0.06] shadow-md">
+          <span class="absolute -top-3 left-1/2 -translate-x-1/2 bg-navy/10 text-navy/60 text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full">Coming Soon</span>
+          <h3 class="font-display text-2xl font-bold text-navy">Pro</h3>
+          <div class="mt-2 flex items-baseline gap-1"><span class="font-display text-4xl font-bold text-navy">$20</span><span class="text-sm text-muted">/month</span></div>
+          <p class="text-xs mt-1 text-muted">$100 one-time setup fee</p>
+          <ul class="mt-6 space-y-2.5 text-sm text-navy">
+            <li class="flex items-start gap-2"><span class="mt-0.5 shrink-0 text-gold-dark">✓</span><span>Everything in Core, plus:</span></li>
+            <li class="flex items-start gap-2"><span class="mt-0.5 shrink-0 text-gold-dark">✓</span><span>Client portal — buyers and sellers get their own login</span></li>
+            <li class="flex items-start gap-2"><span class="mt-0.5 shrink-0 text-gold-dark">✓</span><span>Client to-do list</span></li>
+            <li class="flex items-start gap-2"><span class="mt-0.5 shrink-0 text-gold-dark">✓</span><span>Agent-client message thread</span></li>
+          </ul>
+          <div class="mt-6 pt-6 border-t border-navy/10">
+            <span class="block text-center bg-navy/[0.06] text-navy/40 font-semibold rounded-xl px-5 h-12 leading-[3rem] cursor-not-allowed">Coming Soon</span>
+          </div>
+        </div>
+
+        <!-- Pro+ -->
+        <div class="relative rounded-2xl p-6 md:p-7 flex flex-col bg-white text-navy border border-navy/[0.06] shadow-md">
+          <span class="absolute -top-3 left-1/2 -translate-x-1/2 bg-navy/10 text-navy/60 text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full">Coming Soon</span>
+          <h3 class="font-display text-2xl font-bold text-navy">Pro+</h3>
+          <div class="mt-2 flex items-baseline gap-1"><span class="font-display text-4xl font-bold text-navy">$25</span><span class="text-sm text-muted">/month</span></div>
+          <p class="text-xs mt-1 text-muted">$100 one-time setup fee</p>
+          <ul class="mt-6 space-y-2.5 text-sm text-navy">
+            <li class="flex items-start gap-2"><span class="mt-0.5 shrink-0 text-gold-dark">✓</span><span>Everything in Pro, plus:</span></li>
+            <li class="flex items-start gap-2"><span class="mt-0.5 shrink-0 text-gold-dark">✓</span><span>Smart lender matching</span></li>
+            <li class="flex items-start gap-2"><span class="mt-0.5 shrink-0 text-gold-dark">✓</span><span>Lender directory and ratings</span></li>
+            <li class="flex items-start gap-2"><span class="mt-0.5 shrink-0 text-gold-dark">✓</span><span>Business intelligence dashboard</span></li>
+            <li class="flex items-start gap-2"><span class="mt-0.5 shrink-0 text-gold-dark">✓</span><span>Past client re-engagement alerts</span></li>
+          </ul>
+          <div class="mt-6 pt-6 border-t border-navy/10">
+            <span class="block text-center bg-navy/[0.06] text-navy/40 font-semibold rounded-xl px-5 h-12 leading-[3rem] cursor-not-allowed">Coming Soon</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── FAQ ── -->
+  <section id="faq" class="bg-white py-16 md:py-24 scroll-mt-20">
+    <div class="max-w-3xl mx-auto px-5 md:px-8">
+      <h2 class="text-3xl md:text-5xl font-bold text-navy text-center text-balance leading-tight">Common questions.</h2>
+      <div class="mt-10 space-y-3">
+        <details class="rounded-2xl border border-navy/[0.08] bg-white transition-colors" open>
+          <summary class="px-5 py-4 flex items-center justify-between gap-3 min-h-[56px]">
+            <span class="font-display text-base md:text-lg font-bold text-navy">Do I need to download an app?</span>
+            <span class="faq-icon shrink-0 w-7 h-7 rounded-full flex items-center justify-center transition-all bg-navy/[0.06] text-navy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-4 h-4"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg></span>
+          </summary>
+          <div class="px-5 pb-5 -mt-1 text-muted text-sm leading-relaxed">No. DealFlow works in any browser on your phone or laptop. You can add it to your home screen for an app-like experience.</div>
+        </details>
+        <details class="rounded-2xl border border-navy/[0.08] bg-white transition-colors">
+          <summary class="px-5 py-4 flex items-center justify-between gap-3 min-h-[56px]">
+            <span class="font-display text-base md:text-lg font-bold text-navy">What happens after the 30-day trial?</span>
+            <span class="faq-icon shrink-0 w-7 h-7 rounded-full flex items-center justify-center transition-all bg-navy/[0.06] text-navy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-4 h-4"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg></span>
+          </summary>
+          <div class="px-5 pb-5 -mt-1 text-muted text-sm leading-relaxed">Your card is automatically charged $15/month on day 31. Cancel anytime before then — no charge, no questions.</div>
+        </details>
+        <details class="rounded-2xl border border-navy/[0.08] bg-white transition-colors">
+          <summary class="px-5 py-4 flex items-center justify-between gap-3 min-h-[56px]">
+            <span class="font-display text-base md:text-lg font-bold text-navy">Is my data secure?</span>
+            <span class="faq-icon shrink-0 w-7 h-7 rounded-full flex items-center justify-center transition-all bg-navy/[0.06] text-navy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-4 h-4"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg></span>
+          </summary>
+          <div class="px-5 pb-5 -mt-1 text-muted text-sm leading-relaxed">Yes. All data is encrypted and stored securely. Only you can see your deals, clients, and commissions.</div>
+        </details>
+        <details class="rounded-2xl border border-navy/[0.08] bg-white transition-colors">
+          <summary class="px-5 py-4 flex items-center justify-between gap-3 min-h-[56px]">
+            <span class="font-display text-base md:text-lg font-bold text-navy">Can I use this on my iPhone and Android?</span>
+            <span class="faq-icon shrink-0 w-7 h-7 rounded-full flex items-center justify-center transition-all bg-navy/[0.06] text-navy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-4 h-4"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg></span>
+          </summary>
+          <div class="px-5 pb-5 -mt-1 text-muted text-sm leading-relaxed">Yes. DealFlow works on any phone browser — iPhone Safari, Android Chrome, anything.</div>
+        </details>
+        <details class="rounded-2xl border border-navy/[0.08] bg-white transition-colors">
+          <summary class="px-5 py-4 flex items-center justify-between gap-3 min-h-[56px]">
+            <span class="font-display text-base md:text-lg font-bold text-navy">What if I already use a CRM?</span>
+            <span class="faq-icon shrink-0 w-7 h-7 rounded-full flex items-center justify-center transition-all bg-navy/[0.06] text-navy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-4 h-4"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg></span>
+          </summary>
+          <div class="px-5 pb-5 -mt-1 text-muted text-sm leading-relaxed">DealFlow is focused on active transaction management — not lead generation or email blasts. Most agents use it alongside their existing tools.</div>
+        </details>
+        <details class="rounded-2xl border border-navy/[0.08] bg-white transition-colors">
+          <summary class="px-5 py-4 flex items-center justify-between gap-3 min-h-[56px]">
+            <span class="font-display text-base md:text-lg font-bold text-navy">How is this different from Dotloop or Follow Up Boss?</span>
+            <span class="faq-icon shrink-0 w-7 h-7 rounded-full flex items-center justify-center transition-all bg-navy/[0.06] text-navy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-4 h-4"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg></span>
+          </summary>
+          <div class="px-5 pb-5 -mt-1 text-muted text-sm leading-relaxed">Those are built for teams and brokerages at $50-150/month. DealFlow is built for solo agents at $15/month with a mobile-first experience designed for the field.</div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Final CTA ── -->
+  <section class="bg-navy text-white text-center py-16 md:py-24 gold-grid">
+    <div class="max-w-3xl mx-auto px-5 md:px-8">
+      <h2 class="text-3xl md:text-5xl font-bold text-balance leading-tight">Ready to run your business like a pro?</h2>
+      <p class="text-white/70 text-base md:text-lg mt-4">Start managing your deals the smart way. 30 days free — no risk.</p>
+      <a href="https://buy.stripe.com/cNi14oetl2c75f19853F601" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center bg-gold hover:bg-gold-light text-navy font-semibold rounded-xl px-8 h-14 mt-8 text-base transition-colors">Start Free Trial</a>
+      <p class="text-white/50 text-xs mt-4">30-day free trial · $100 setup + $15/month after · Cancel anytime</p>
+    </div>
+  </section>
+
+  <!-- ── Footer ── -->
+  <footer class="bg-navy-dark text-white">
+    <div class="max-w-7xl mx-auto px-5 md:px-8 py-12 md:py-16 grid grid-cols-1 md:grid-cols-4 gap-8 md:gap-12">
+      <div>
+        <p class="font-display text-2xl font-bold tracking-tight">Deal<span class="text-gold">Flow</span></p>
+        <p class="text-white/60 text-sm mt-2">Real estate transactions, simplified.</p>
+        <a href="https://dealflownow.net" class="text-gold-light text-sm mt-3 inline-block hover:text-gold">dealflownow.net</a>
+      </div>
+      <div>
+        <p class="text-[11px] font-bold uppercase tracking-[0.14em] text-gold">Product</p>
+        <ul class="mt-3 space-y-2 text-sm">
+          <li><a href="#features" class="text-white/70 hover:text-white transition-colors">Features</a></li>
+          <li><a href="#pricing" class="text-white/70 hover:text-white transition-colors">Pricing</a></li>
+          <li><a href="#how-it-works" class="text-white/70 hover:text-white transition-colors">How It Works</a></li>
+          <li><a href="#faq" class="text-white/70 hover:text-white transition-colors">FAQ</a></li>
+        </ul>
+      </div>
+      <div>
+        <p class="text-[11px] font-bold uppercase tracking-[0.14em] text-gold">Account</p>
+        <ul class="mt-3 space-y-2 text-sm">
+          <li><a href="/login" class="text-white/70 hover:text-white transition-colors">Sign In</a></li>
+          <li><a href="/signup" class="text-white/70 hover:text-white transition-colors">Sign Up</a></li>
+          <li><a href="https://buy.stripe.com/cNi14oetl2c75f19853F601" target="_blank" rel="noopener noreferrer" class="text-white/70 hover:text-white transition-colors">Free Trial</a></li>
+        </ul>
+      </div>
+      <div>
+        <p class="text-[11px] font-bold uppercase tracking-[0.14em] text-gold">Contact</p>
+        <ul class="mt-3 space-y-2 text-sm">
+          <li><a href="mailto:jimmy@puente-translations.com" class="text-white/70 hover:text-white transition-colors break-all">jimmy@puente-translations.com</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="border-t border-white/[0.06] py-6 text-center text-white/40 text-xs">© 2026 DealFlow. All rights reserved.</div>
+  </footer>
+
+  <script>
+    // Mobile menu toggle
+    const btn = document.getElementById('mobile-menu-btn')
+    const menu = document.getElementById('mobile-menu')
+    const iconMenu = document.getElementById('icon-menu')
+    const iconClose = document.getElementById('icon-close')
+    btn.addEventListener('click', () => {
+      const open = menu.classList.toggle('hidden') === false
+      iconMenu.classList.toggle('hidden', open)
+      iconClose.classList.toggle('hidden', !open)
+    })
+    // Close mobile menu when an internal anchor is clicked
+    menu.querySelectorAll('a').forEach((a) => a.addEventListener('click', () => {
+      menu.classList.add('hidden')
+      iconMenu.classList.remove('hidden')
+      iconClose.classList.add('hidden')
+    }))
+  </script>
+</body>
+</html>
