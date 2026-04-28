@@ -3,6 +3,7 @@
 //
 // `tone` controls the value color: navy (default), gold, green, orange.
 // `variant`: 'card' (white) or 'navy' (filled navy with gold accents).
+// `onClick` makes the card interactive (renders as a button with hover lift).
 
 const TONE = {
   navy: 'text-navy',
@@ -21,16 +22,26 @@ export default function StatCard({
   tone = 'navy',
   variant = 'card',
   children,
+  onClick,
 }) {
   const isNavy = variant === 'navy'
+  const interactive = Boolean(onClick)
+  const Tag = interactive ? 'button' : 'div'
+
+  const base = `relative rounded-2xl p-5 w-full text-left ${
+    isNavy
+      ? 'bg-navy text-white shadow-pop overflow-hidden'
+      : 'card'
+  }`
+  const hover = interactive
+    ? 'cursor-pointer hover:scale-[1.02] hover:shadow-pop transition-all duration-200 group'
+    : ''
 
   return (
-    <div
-      className={`relative rounded-2xl p-5 ${
-        isNavy
-          ? 'bg-navy text-white shadow-pop overflow-hidden'
-          : 'card'
-      }`}
+    <Tag
+      onClick={onClick}
+      type={interactive ? 'button' : undefined}
+      className={`${base} ${hover}`}
     >
       {isNavy && (
         <div className="absolute top-0 right-0 w-24 h-24 bg-gold/10 rounded-full -translate-y-8 translate-x-8 pointer-events-none" />
@@ -74,6 +85,6 @@ export default function StatCard({
           {children && <div className={isNavy ? 'text-white/70' : 'text-muted'}>{children}</div>}
         </div>
       )}
-    </div>
+    </Tag>
   )
 }

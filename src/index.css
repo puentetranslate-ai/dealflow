@@ -71,7 +71,7 @@
   }
 
   .card-hover {
-    @apply card hover:shadow-pop hover:-translate-y-0.5 transition-all duration-200;
+    @apply card cursor-pointer hover:scale-[1.02] hover:shadow-pop transition-all duration-200;
   }
 
   .section-title {

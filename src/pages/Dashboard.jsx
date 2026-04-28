@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { format } from 'date-fns'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
@@ -13,7 +13,7 @@ import StatCard from '../components/StatCard'
 import PipelineBar from '../components/PipelineBar'
 import LoadingSpinner from '../components/LoadingSpinner'
 import Fab from '../components/Fab'
-import { ArrowRightIcon, BellIcon, FunnelIcon } from '../components/Icon'
+import { ArrowRightIcon, BellIcon, FunnelIcon, XIcon } from '../components/Icon'
 
 const SORT_OPTIONS = [
   { id: 'created_desc', label: 'Newest first' },
@@ -44,6 +44,9 @@ function greeting() {
 export default function Dashboard() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const phaseFilter = searchParams.get('phase')
+  const transactionsRef = useRef(null)
   const [deals, setDeals] = useState([])
   const [deadlineItems, setDeadlineItems] = useState([])
   const [leads, setLeads] = useState([])
@@ -53,6 +56,18 @@ export default function Dashboard() {
   const [filter, setFilter] = useState('all')
   const [sort, setSort] = useState('created_desc')
   const [search, setSearch] = useState('')
+
+  const scrollToTransactions = () => {
+    transactionsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  const handlePhaseClick = (phase) => {
+    setSearchParams(phase === phaseFilter ? {} : { phase })
+    // Defer scroll until the URL update has rendered the chip
+    setTimeout(scrollToTransactions, 50)
+  }
+
+  const clearPhaseFilter = () => setSearchParams({})
 
   const fetchData = useCallback(async () => {
     try {
@@ -142,6 +157,10 @@ export default function Dashboard() {
       })
     }
 
+    if (phaseFilter) {
+      list = list.filter((d) => d.phase === phaseFilter)
+    }
+
     if (sort === 'closing_asc') {
       list.sort((a, b) => {
         const da = a.closing_date ? new Date(a.closing_date).getTime() : Infinity
@@ -154,7 +173,7 @@ export default function Dashboard() {
     // created_desc is the natural order from the query
 
     return list
-  }, [deals, filter, sort, search])
+  }, [deals, filter, sort, search, phaseFilter])
 
   const nextDeadlineForDeal = (dealId) =>
     deadlineItems.find((i) => i.deal_id === dealId) || null
@@ -221,12 +240,14 @@ export default function Dashboard() {
             value={deals.length}
             trend={`${buyerCount} buyer · ${sellerCount} seller`}
             trendTone="muted"
+            onClick={scrollToTransactions}
           />
           <StatCard
             label="Pending Commission"
             value={formatCurrency(pendingCommission)}
             tone="gold"
             variant="navy"
+            onClick={() => navigate('/commission')}
           >
             {deals.length} open {deals.length === 1 ? 'transaction' : 'transactions'}
           </StatCard>
@@ -234,6 +255,7 @@ export default function Dashboard() {
             label="Deadlines This Week"
             value={deadlineItems.length}
             tone={deadlineItems.length > 0 ? 'orange' : 'navy'}
+            onClick={() => navigate('/commission')}
           >
             <span className="inline-flex items-center gap-2">
               <span className="inline-flex items-center gap-1">
@@ -247,8 +269,24 @@ export default function Dashboard() {
           </StatCard>
         </div>
 
-        {/* ── Pipeline ── */}
-        <div className="card p-5 md:p-6 mt-4 md:mt-5">
+        {/* ── Pipeline ──
+            Whole card is tappable → /commission. Inner phase labels handle
+            their own clicks (see PipelineBar — they stopPropagation). The
+            "View full pipeline" link also stopPropagations to avoid double-firing.
+        */}
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => navigate('/commission')}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              navigate('/commission')
+            }
+          }}
+          className="card cursor-pointer hover:scale-[1.02] hover:shadow-pop transition-all duration-200 p-5 md:p-6 mt-4 md:mt-5 group"
+          aria-label="View full pipeline"
+        >
           <div className="flex items-center justify-between mb-4">
             <div>
               <p className="section-title mb-0">Pipeline</p>
@@ -256,19 +294,37 @@ export default function Dashboard() {
                 {deals.length} {deals.length === 1 ? 'deal' : 'deals'} in progress
               </p>
             </div>
-            <button className="hidden md:flex items-center gap-1 text-xs font-semibold text-gold-dark hover:text-gold transition-colors">
+            <span className="hidden md:flex items-center gap-1 text-xs font-semibold text-gold-dark transition-colors">
               View full pipeline
-              <ArrowRightIcon className="w-3.5 h-3.5" />
-            </button>
+              <ArrowRightIcon className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
+            </span>
           </div>
-          <PipelineBar deals={deals} />
+          <PipelineBar
+            deals={deals}
+            onPhaseClick={handlePhaseClick}
+            activePhase={phaseFilter}
+          />
         </div>
 
         {/* ── Leads Pipeline ── */}
         <LeadsPipelineCard leads={leads} onClick={() => navigate('/leads')} />
 
         {/* ── Active Transactions ── */}
-        <div className="mt-6">
+        <div ref={transactionsRef} id="active-transactions" className="mt-6 scroll-mt-24">
+          {phaseFilter && (
+            <div className="mb-3 inline-flex items-center gap-2 bg-gold/10 border border-gold/30 rounded-full pl-3 pr-1.5 py-1">
+              <span className="text-xs font-semibold text-gold-dark">
+                Phase: {phaseFilter}
+              </span>
+              <button
+                onClick={clearPhaseFilter}
+                className="w-6 h-6 rounded-full text-gold-dark hover:bg-gold/20 flex items-center justify-center transition-colors"
+                aria-label="Clear phase filter"
+              >
+                <XIcon className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-display text-xl font-bold text-navy">Active Transactions</h2>
             <select
