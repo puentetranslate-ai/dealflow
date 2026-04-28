@@ -2,6 +2,10 @@ import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import LoadingSpinner from '../../components/LoadingSpinner'
+import AuthShell from '../../components/AuthShell'
+import {
+  MailIcon, LockIcon, EyeIcon, EyeOffIcon, ArrowRightIcon, CheckIcon, UsersIcon,
+} from '../../components/Icon'
 
 export default function SignUp() {
   const { user, signUp } = useAuth()
@@ -9,6 +13,7 @@ export default function SignUp() {
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPw, setShowPw] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(false)
@@ -37,97 +42,112 @@ export default function SignUp() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-navy flex flex-col items-center justify-center px-6">
-        <div className="bg-white rounded-3xl p-8 shadow-2xl text-center max-w-sm w-full">
+      <AuthShell>
+        <div className="bg-white rounded-3xl p-8 shadow-pop text-center">
           <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
+            <CheckIcon className="w-8 h-8 text-green-600" strokeWidth={2.5} />
           </div>
           <h2 className="font-display text-2xl font-bold text-navy mb-2">Check your email</h2>
           <p className="text-muted text-sm">
-            We sent a confirmation link to <strong className="text-navy">{email}</strong>. Click it to activate your account, then log in.
+            We sent a confirmation link to{' '}
+            <strong className="text-navy">{email}</strong>. Click it to activate your account, then log in.
           </p>
           <Link to="/login" className="btn-navy mt-6 inline-flex">
             Go to Login
           </Link>
         </div>
-      </div>
+      </AuthShell>
     )
   }
 
   return (
-    <div className="min-h-screen bg-navy flex flex-col">
-      <div className="flex-1 flex flex-col justify-center px-6 py-12">
-        <div className="mb-10 text-center">
-          <h1 className="font-display text-4xl font-bold text-white tracking-tight">
-            Deal<span className="text-gold">Flow</span>
-          </h1>
-          <p className="text-muted mt-2 text-sm">Real estate transactions, simplified.</p>
-        </div>
+    <AuthShell>
+      <div className="bg-white rounded-3xl p-7 md:p-9 shadow-pop">
+        <h2 className="font-display text-3xl font-bold text-navy">Create your account</h2>
+        <p className="text-muted text-sm mt-1.5">Start tracking your pipeline in minutes.</p>
 
-        <div className="bg-white rounded-3xl p-6 shadow-2xl">
-          <h2 className="font-display text-2xl font-bold text-navy mb-6">Create your account</h2>
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mt-5 text-red-600 text-sm">
+            {error}
+          </div>
+        )}
 
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4 text-red-600 text-sm">
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="label">Full Name</label>
+        <form onSubmit={handleSubmit} className="space-y-4 mt-6">
+          <div>
+            <label className="label">Full name</label>
+            <div className="relative">
+              <UsersIcon className="w-4 h-4 text-muted absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="text"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="input-field"
+                className="input-with-icon"
                 placeholder="Jane Smith"
                 autoComplete="name"
                 required
               />
             </div>
+          </div>
 
-            <div>
-              <label className="label">Email</label>
+          <div>
+            <label className="label">Email</label>
+            <div className="relative">
+              <MailIcon className="w-4 h-4 text-muted absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="input-field"
+                className="input-with-icon"
                 placeholder="you@example.com"
                 autoComplete="email"
                 required
               />
             </div>
+          </div>
 
-            <div>
-              <label className="label">Password</label>
+          <div>
+            <label className="label">Password</label>
+            <div className="relative">
+              <LockIcon className="w-4 h-4 text-muted absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
-                type="password"
+                type={showPw ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="input-field"
+                className="input-with-icon pr-12"
                 placeholder="Min. 8 characters"
                 autoComplete="new-password"
                 required
               />
+              <button
+                type="button"
+                onClick={() => setShowPw((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-muted hover:text-navy transition-colors"
+                aria-label={showPw ? 'Hide password' : 'Show password'}
+              >
+                {showPw ? <EyeOffIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
+              </button>
             </div>
+          </div>
 
-            <button type="submit" disabled={loading} className="btn-navy mt-2">
-              {loading ? <LoadingSpinner size="sm" light /> : 'Create Account'}
-            </button>
-          </form>
+          <button type="submit" disabled={loading} className="btn-navy w-full mt-2 group">
+            {loading ? (
+              <LoadingSpinner size="sm" light />
+            ) : (
+              <>
+                Create Account
+                <ArrowRightIcon className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-0.5" />
+              </>
+            )}
+          </button>
+        </form>
 
-          <p className="text-center text-muted text-sm mt-6">
-            Already have an account?{' '}
-            <Link to="/login" className="text-gold font-semibold">
-              Sign in
-            </Link>
-          </p>
-        </div>
+        <p className="text-center text-muted text-sm mt-6">
+          Already have an account?{' '}
+          <Link to="/login" className="text-gold font-semibold hover:text-gold-dark transition-colors">
+            Sign in
+          </Link>
+        </p>
       </div>
-    </div>
+    </AuthShell>
   )
 }

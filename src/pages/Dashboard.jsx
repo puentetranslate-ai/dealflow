@@ -1,37 +1,77 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { format } from 'date-fns'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
-import { formatCurrency } from '../lib/utils'
+import { formatCurrency, calcCommission, daysUntil } from '../lib/utils'
+import AppLayout from '../components/AppLayout'
+import TopBar from '../components/TopBar'
+import MobileHeader from '../components/MobileHeader'
 import DealCard from '../components/DealCard'
 import StatCard from '../components/StatCard'
+import PipelineBar from '../components/PipelineBar'
 import LoadingSpinner from '../components/LoadingSpinner'
-import BottomNav from '../components/BottomNav'
+import Fab from '../components/Fab'
+import { ArrowRightIcon, BellIcon } from '../components/Icon'
+
+const SORT_OPTIONS = [
+  { id: 'created_desc', label: 'Newest first' },
+  { id: 'closing_asc', label: 'Closing soonest' },
+  { id: 'price_desc', label: 'Highest price' },
+]
+
+const FILTERS = [
+  { id: 'all', label: 'All' },
+  { id: 'urgent', label: 'Urgent' },
+  { id: 'buyer', label: "Buyer Side" },
+  { id: 'seller', label: "Seller Side" },
+]
+
+const FILTERS_DESKTOP = [
+  { id: 'all', label: 'All' },
+  { id: 'buyer', label: "As Buyer's Agent" },
+  { id: 'seller', label: 'As Listing Agent' },
+]
+
+function greeting() {
+  const h = new Date().getHours()
+  if (h < 12) return 'Good morning'
+  if (h < 17) return 'Good afternoon'
+  return 'Good evening'
+}
 
 export default function Dashboard() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const [deals, setDeals] = useState([])
   const [deadlineItems, setDeadlineItems] = useState([])
+  const [profileName, setProfileName] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [filter, setFilter] = useState('all')
+  const [sort, setSort] = useState('created_desc')
+  const [search, setSearch] = useState('')
 
   const fetchData = useCallback(async () => {
     try {
       setLoading(true)
-      const { data: dealsData, error: dealsErr } = await supabase
-        .from('deals')
-        .select('*')
-        .eq('user_id', user.id)
-        .neq('phase', 'Closed')
-        .order('created_at', { ascending: false })
 
-      if (dealsErr) throw dealsErr
-      setDeals(dealsData || [])
+      const [profileRes, dealsRes] = await Promise.all([
+        supabase.from('profiles').select('full_name').eq('id', user.id).single(),
+        supabase
+          .from('deals')
+          .select('*')
+          .eq('user_id', user.id)
+          .neq('phase', 'Closed')
+          .order('created_at', { ascending: false }),
+      ])
+
+      setProfileName(profileRes.data?.full_name || user.user_metadata?.full_name || '')
+      if (dealsRes.error) throw dealsRes.error
+      setDeals(dealsRes.data || [])
 
       const today = new Date().toISOString().split('T')[0]
       const nextWeek = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0]
-
       const { data: items } = await supabase
         .from('checklist_items')
         .select('id, deal_id, label, due_date')
@@ -52,87 +92,262 @@ export default function Dashboard() {
 
   useEffect(() => { fetchData() }, [fetchData])
 
+  // Stats
+  const buyerCount = deals.filter((d) => d.agent_role === 'buyer').length
+  const sellerCount = deals.filter((d) => d.agent_role === 'seller').length
   const pendingCommission = deals.reduce(
-    (sum, d) => sum + ((d.sale_price || 0) * (d.commission_pct || 0)) / 100,
+    (sum, d) => sum + calcCommission(d.sale_price, d.commission_pct),
     0
   )
+  const avgCommissionPct = deals.length
+    ? deals.reduce((s, d) => s + (parseFloat(d.commission_pct) || 0), 0) / deals.length
+    : 0
+
+  const todayKey = new Date().toISOString().split('T')[0]
+  const todayDeadlines = deadlineItems.filter((i) => i.due_date === todayKey).length
+  const soonDeadlines = deadlineItems.length - todayDeadlines
+  const urgentTomorrowDeadlines = deadlineItems.filter((i) => {
+    const days = daysUntil(i.due_date)
+    return days !== null && days >= 0 && days <= 1
+  }).length
+
+  // Filter + sort
+  const visibleDeals = useMemo(() => {
+    let list = [...deals]
+
+    if (search.trim()) {
+      const q = search.toLowerCase()
+      list = list.filter(
+        (d) =>
+          d.address?.toLowerCase().includes(q) ||
+          d.buyer_name?.toLowerCase().includes(q) ||
+          d.seller_name?.toLowerCase().includes(q)
+      )
+    }
+
+    if (filter === 'buyer') list = list.filter((d) => d.agent_role === 'buyer')
+    if (filter === 'seller') list = list.filter((d) => d.agent_role === 'seller')
+    if (filter === 'urgent') {
+      list = list.filter((d) => {
+        const days = d.closing_date ? daysUntil(d.closing_date) : null
+        return days !== null && days <= 7
+      })
+    }
+
+    if (sort === 'closing_asc') {
+      list.sort((a, b) => {
+        const da = a.closing_date ? new Date(a.closing_date).getTime() : Infinity
+        const db = b.closing_date ? new Date(b.closing_date).getTime() : Infinity
+        return da - db
+      })
+    } else if (sort === 'price_desc') {
+      list.sort((a, b) => (b.sale_price || 0) - (a.sale_price || 0))
+    }
+    // created_desc is the natural order from the query
+
+    return list
+  }, [deals, filter, sort, search])
 
   const nextDeadlineForDeal = (dealId) =>
     deadlineItems.find((i) => i.deal_id === dealId) || null
 
+  const firstName = (profileName || user.email || '').split(/[\s@]+/)[0] || 'Agent'
+  const dateLabel = format(new Date(), 'EEEE, MMMM d')
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-cream flex items-center justify-center">
-        <LoadingSpinner />
-      </div>
+      <AppLayout>
+        <div className="min-h-screen flex items-center justify-center">
+          <LoadingSpinner />
+        </div>
+      </AppLayout>
     )
   }
 
   return (
-    <div className="min-h-screen bg-cream pb-28">
-      <div className="bg-navy px-5 pt-14 pb-8">
-        <p className="text-muted text-sm font-medium">Good morning</p>
-        <h1 className="font-display text-3xl font-bold text-white mt-1">
-          Deal<span className="text-gold">Flow</span>
+    <AppLayout>
+      {/* ── Mobile Header ── */}
+      <MobileHeader showBell title={null}>
+        <p className="text-gold text-xs font-semibold uppercase tracking-[0.14em]">
+          {greeting()}, {firstName}
+        </p>
+        <h1 className="font-display text-2xl font-bold text-white leading-tight mt-1 text-balance">
+          You have <span className="text-gold">{deals.length}</span>{' '}
+          {deals.length === 1 ? 'deal' : 'deals'} in play.
+        </h1>
+      </MobileHeader>
+
+      {/* ── Desktop Top Bar ── */}
+      <TopBar search={search} onSearchChange={setSearch} />
+
+      {/* ── Desktop greeting ── */}
+      <div className="hidden md:block px-8 pt-2 pb-4">
+        <p className="text-muted text-sm font-medium">
+          {dateLabel} · {greeting()}, <span className="text-gold-dark font-semibold">{firstName}</span>
+        </p>
+        <h1 className="font-display text-3xl font-bold text-navy mt-1 text-balance">
+          You have <span className="text-gold-dark">{deals.length}</span>{' '}
+          active {deals.length === 1 ? 'deal' : 'deals'}
+          {urgentTomorrowDeadlines > 0 && (
+            <>
+              {' and '}
+              <span className="text-orange-500">{urgentTomorrowDeadlines}</span>{' '}
+              {urgentTomorrowDeadlines === 1 ? 'urgent deadline' : 'urgent deadlines'} tomorrow
+            </>
+          )}
+          .
         </h1>
       </div>
 
-      <div className="px-4 -mt-5">
-        <div className="grid grid-cols-3 gap-3">
-          <StatCard label="Active Deals" value={deals.length} />
-          <StatCard label="Pending Commission" value={formatCurrency(pendingCommission)} small />
-          <StatCard
-            label="Deadlines This Week"
-            value={deadlineItems.length}
-            warning={deadlineItems.length > 0}
-          />
-        </div>
-      </div>
-
-      <div className="px-4 mt-7">
-        <h2 className="text-navy font-semibold text-lg mb-4">Active Transactions</h2>
-
+      <div className="px-5 md:px-8 pb-32 md:pb-12">
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4 text-red-600 text-sm">
+          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 my-4 text-red-600 text-sm">
             {error}
           </div>
         )}
 
-        {deals.length === 0 ? (
-          <div className="text-center py-16">
-            <div className="w-16 h-16 bg-navy/10 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-navy/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-              </svg>
+        {/* ── Stats: mobile 2 cols, desktop 3 cols ── */}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-5 mt-5 md:mt-2">
+          <StatCard
+            label="Active Deals"
+            value={deals.length}
+            trend={`${buyerCount} buyer · ${sellerCount} seller`}
+            trendTone="muted"
+          />
+          <StatCard
+            label="Pending Commission"
+            value={formatCurrency(pendingCommission)}
+            tone="gold"
+            variant="navy"
+          >
+            {deals.length} open {deals.length === 1 ? 'transaction' : 'transactions'}
+          </StatCard>
+          <StatCard
+            label="Deadlines This Week"
+            value={deadlineItems.length}
+            tone={deadlineItems.length > 0 ? 'orange' : 'navy'}
+          >
+            <span className="inline-flex items-center gap-2">
+              <span className="inline-flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500" /> {todayDeadlines} today
+              </span>
+              <span className="text-muted/60">·</span>
+              <span className="inline-flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-orange-400" /> {soonDeadlines} soon
+              </span>
+            </span>
+          </StatCard>
+        </div>
+
+        {/* ── Pipeline ── */}
+        <div className="card p-5 md:p-6 mt-4 md:mt-5">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p className="section-title mb-0">Pipeline</p>
+              <p className="text-navy font-semibold text-sm mt-1">
+                {deals.length} {deals.length === 1 ? 'deal' : 'deals'} in progress
+              </p>
             </div>
-            <p className="text-navy font-semibold text-base">No active deals</p>
-            <p className="text-muted text-sm mt-1">Tap the + button to add your first transaction</p>
+            <button className="hidden md:flex items-center gap-1 text-xs font-semibold text-gold-dark hover:text-gold transition-colors">
+              View full pipeline
+              <ArrowRightIcon className="w-3.5 h-3.5" />
+            </button>
           </div>
-        ) : (
-          <div className="space-y-3">
-            {deals.map((deal) => (
-              <DealCard
-                key={deal.id}
-                deal={deal}
-                nextDeadline={nextDeadlineForDeal(deal.id)}
-                onClick={() => navigate(`/deals/${deal.id}`)}
-              />
+          <PipelineBar deals={deals} />
+        </div>
+
+        {/* ── Active Transactions ── */}
+        <div className="mt-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-display text-xl font-bold text-navy">Active Transactions</h2>
+            <select
+              value={sort}
+              onChange={(e) => setSort(e.target.value)}
+              className="text-xs font-semibold text-navy bg-white border border-navy/10 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-gold/30"
+            >
+              {SORT_OPTIONS.map((o) => (
+                <option key={o.id} value={o.id}>{o.label}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Filter tabs (different copy desktop vs mobile, both rendered, one hidden by CSS) */}
+          <div className="md:hidden flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+            {FILTERS.map((f) => (
+              <FilterPill key={f.id} active={filter === f.id} onClick={() => setFilter(f.id)}>
+                {f.label}
+              </FilterPill>
             ))}
           </div>
-        )}
+          <div className="hidden md:flex gap-2 pb-2">
+            {FILTERS_DESKTOP.map((f) => (
+              <FilterPill key={f.id} active={filter === f.id} onClick={() => setFilter(f.id)}>
+                {f.label}
+              </FilterPill>
+            ))}
+          </div>
+
+          {/* Cards */}
+          {visibleDeals.length === 0 ? (
+            <EmptyState
+              hasAnyDeals={deals.length > 0}
+              filter={filter}
+              onAdd={() => navigate('/deals/new')}
+            />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mt-4">
+              {visibleDeals.map((deal) => (
+                <DealCard
+                  key={deal.id}
+                  deal={deal}
+                  nextDeadline={nextDeadlineForDeal(deal.id)}
+                  onClick={() => navigate(`/deals/${deal.id}`)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
-      <button
-        onClick={() => navigate('/deals/new')}
-        className="fixed bottom-24 right-4 w-14 h-14 bg-gold rounded-full shadow-lg flex items-center justify-center z-50 active:scale-95 transition-transform"
-        aria-label="New Deal"
-      >
-        <svg className="w-7 h-7 text-navy" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-        </svg>
-      </button>
+      <Fab />
+    </AppLayout>
+  )
+}
 
-      <BottomNav />
+function FilterPill({ active, onClick, children }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`shrink-0 px-4 h-9 rounded-full text-sm font-semibold transition-colors ${
+        active
+          ? 'bg-navy text-white'
+          : 'bg-white text-navy/70 border border-navy/10 hover:border-navy/30'
+      }`}
+    >
+      {children}
+    </button>
+  )
+}
+
+function EmptyState({ hasAnyDeals, filter, onAdd }) {
+  if (hasAnyDeals) {
+    return (
+      <div className="text-center py-16 mt-2">
+        <p className="text-navy font-semibold">No deals match this filter.</p>
+        <p className="text-muted text-sm mt-1">Try a different tab.</p>
+      </div>
+    )
+  }
+  return (
+    <div className="text-center py-16 mt-2">
+      <div className="w-16 h-16 bg-navy/5 rounded-full flex items-center justify-center mx-auto mb-4">
+        <BellIcon className="w-7 h-7 text-navy/30" />
+      </div>
+      <p className="text-navy font-semibold">No active deals yet</p>
+      <p className="text-muted text-sm mt-1">Add your first transaction to start tracking.</p>
+      <button onClick={onAdd} className="btn-primary mt-5 inline-flex w-auto px-6">
+        + New Deal
+      </button>
     </div>
   )
 }

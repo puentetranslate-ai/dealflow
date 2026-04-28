@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
-import { PHASES, DEFAULT_CHECKLIST } from '../lib/constants'
+import { PHASES, PHASE_STYLES, DEFAULT_CHECKLIST } from '../lib/constants'
 import { formatCurrency, calcCommission } from '../lib/utils'
+import AppLayout from '../components/AppLayout'
 import LoadingSpinner from '../components/LoadingSpinner'
+import { CheckIcon, ArrowLeftIcon, UsersIcon, HomeIcon } from '../components/Icon'
 
 const BLANK = {
   address: '',
@@ -14,12 +16,8 @@ const BLANK = {
   phase: 'Offer Accepted',
   offer_date: '',
   closing_date: '',
-  buyer_name: '',
-  buyer_phone: '',
-  buyer_email: '',
-  seller_name: '',
-  seller_phone: '',
-  seller_email: '',
+  buyer_name: '', buyer_phone: '', buyer_email: '',
+  seller_name: '', seller_phone: '', seller_email: '',
   notes: '',
 }
 
@@ -35,19 +33,14 @@ export default function DealForm() {
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    if (isEdit) {
-      fetchDeal()
-    } else {
-      loadDefaultCommission()
-    }
+    if (isEdit) fetchDeal()
+    else loadDefaultCommission()
   }, [id])
 
   const loadDefaultCommission = async () => {
     const { data } = await supabase
-      .from('profiles')
-      .select('default_commission_pct')
-      .eq('id', user.id)
-      .single()
+      .from('profiles').select('default_commission_pct')
+      .eq('id', user.id).single()
     if (data?.default_commission_pct != null) {
       setForm((f) => ({ ...f, commission_pct: String(data.default_commission_pct) }))
     }
@@ -55,17 +48,11 @@ export default function DealForm() {
 
   const fetchDeal = async () => {
     const { data, error } = await supabase
-      .from('deals')
-      .select('*')
-      .eq('id', id)
-      .eq('user_id', user.id)
-      .single()
-
+      .from('deals').select('*').eq('id', id).eq('user_id', user.id).single()
     if (error || !data) {
       navigate('/dashboard', { replace: true })
       return
     }
-
     setOriginalPhase(data.phase)
     setForm({
       address: data.address || '',
@@ -87,21 +74,14 @@ export default function DealForm() {
   }
 
   const set = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }))
-
   const commissionDollar = calcCommission(form.sale_price, form.commission_pct)
 
   const handleSave = async () => {
-    if (!form.address.trim()) {
-      setError('Property address is required.')
-      return
-    }
-    setSaving(true)
-    setError(null)
-
+    if (!form.address.trim()) { setError('Property address is required.'); return }
+    setSaving(true); setError(null)
     try {
       const now = new Date().toISOString()
       const phaseChanged = isEdit && form.phase !== originalPhase
-
       const payload = {
         address: form.address.trim(),
         sale_price: form.sale_price ? parseFloat(form.sale_price) : null,
@@ -120,24 +100,16 @@ export default function DealForm() {
         updated_at: now,
         ...(phaseChanged ? { phase_changed_at: now } : {}),
       }
-
       if (isEdit) {
-        const { error } = await supabase
-          .from('deals')
-          .update(payload)
-          .eq('id', id)
-          .eq('user_id', user.id)
+        const { error } = await supabase.from('deals').update(payload).eq('id', id).eq('user_id', user.id)
         if (error) throw error
       } else {
-        const { data, error } = await supabase
-          .from('deals')
+        const { data, error } = await supabase.from('deals')
           .insert({ ...payload, user_id: user.id, phase_changed_at: now, created_at: now })
-          .select()
-          .single()
+          .select().single()
         if (error) throw error
         await seedChecklist(data.id)
       }
-
       navigate(-1)
     } catch (err) {
       setError(err.message)
@@ -159,43 +131,50 @@ export default function DealForm() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-cream flex items-center justify-center">
-        <LoadingSpinner />
-      </div>
+      <AppLayout hideBottomNav>
+        <div className="min-h-screen flex items-center justify-center">
+          <LoadingSpinner />
+        </div>
+      </AppLayout>
     )
   }
 
   return (
-    <div className="min-h-screen bg-cream pb-10">
-      <div className="bg-navy px-4 pt-14 pb-4 flex items-center justify-between sticky top-0 z-40">
-        <button
-          onClick={() => navigate(-1)}
-          className="text-muted flex items-center gap-1 min-h-[44px] pr-4"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          <span className="text-sm">Cancel</span>
-        </button>
-        <h1 className="font-display text-lg font-bold text-white">
-          {isEdit ? 'Edit Deal' : 'New Deal'}
-        </h1>
-        <div className="w-16" />
-      </div>
+    <AppLayout hideBottomNav>
+      {/* ── Header (mobile + desktop, navy with gold-grid texture) ── */}
+      <header className="bg-navy text-white pt-safe gold-grid-bg">
+        <div className="px-5 md:px-8 pt-6 pb-7">
+          <div className="flex items-center justify-between min-h-[36px]">
+            <button
+              onClick={() => navigate(-1)}
+              className="flex items-center gap-1.5 text-white/70 hover:text-white text-sm font-medium -ml-2 px-2 py-2 transition-colors"
+            >
+              <ArrowLeftIcon className="w-4 h-4" />
+              Cancel
+            </button>
+            <span className="text-xs font-semibold text-white/60 tracking-wider">Step 1 of 1</span>
+          </div>
+          <h1 className="font-display text-3xl md:text-4xl font-bold mt-3 leading-tight">
+            {isEdit ? 'Edit ' : 'New '}
+            <span className="text-gold">Deal</span>
+          </h1>
+          <p className="text-white/60 text-sm mt-1.5">
+            {isEdit ? 'Update transaction details.' : 'Start tracking a new transaction in your pipeline.'}
+          </p>
+        </div>
+      </header>
 
-      <div className="px-4 pt-6 space-y-6">
+      <div className="px-5 md:px-8 pt-6 pb-32 md:pb-12 max-w-3xl">
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-red-600 text-sm">
+          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-5 text-red-600 text-sm">
             {error}
           </div>
         )}
 
-        {/* Property Info */}
-        <section>
-          <p className="section-title">Property</p>
-          <div className="space-y-3">
-            <div>
-              <label className="label">Property Address *</label>
+        <div className="space-y-6">
+          {/* Property */}
+          <Section icon={<HomeIcon className="w-4 h-4" />} title="Property" subtitle="Where is the deal?">
+            <Field label="Property Address" required>
               <input
                 type="text"
                 value={form.address}
@@ -203,148 +182,249 @@ export default function DealForm() {
                 className="input-field"
                 placeholder="123 Main St, Tampa, FL 33601"
               />
-            </div>
+            </Field>
 
-            <div>
-              <label className="label">Sale Price</label>
-              <input
-                type="number"
-                value={form.sale_price}
-                onChange={set('sale_price')}
-                className="input-field"
-                placeholder="450000"
-                inputMode="numeric"
-              />
-            </div>
-
-            <div>
-              <label className="label">Agent Role</label>
-              <div className="flex rounded-xl overflow-hidden border border-gray-200">
-                {['buyer', 'seller'].map((role) => (
-                  <button
-                    key={role}
-                    type="button"
-                    onClick={() => setForm((f) => ({ ...f, agent_role: role }))}
-                    className={`flex-1 py-3 font-semibold text-sm transition-colors ${
-                      form.agent_role === role
-                        ? 'bg-navy text-white'
-                        : 'bg-white text-muted'
-                    }`}
-                  >
-                    {role === 'buyer' ? "Buyer's Agent" : 'Listing Agent'}
-                  </button>
-                ))}
+            <Field label="Sale Price">
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted font-semibold pointer-events-none">$</span>
+                <input
+                  type="number"
+                  value={form.sale_price}
+                  onChange={set('sale_price')}
+                  className="input-field pl-8"
+                  placeholder="450,000"
+                  inputMode="numeric"
+                />
               </div>
-            </div>
+            </Field>
+          </Section>
 
-            <div>
-              <label className="label">Commission %</label>
-              <input
-                type="number"
-                value={form.commission_pct}
-                onChange={set('commission_pct')}
-                className="input-field"
-                placeholder="3.0"
-                inputMode="decimal"
-                step="0.1"
+          {/* Agent Role */}
+          <Section icon={<UsersIcon className="w-4 h-4" />} title="Agent Role" subtitle="Which side are you on?">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <RoleCard
+                active={form.agent_role === 'buyer'}
+                onClick={() => setForm((f) => ({ ...f, agent_role: 'buyer' }))}
+                title="Buyer's Agent"
+                subtitle="Representing the buyer"
+              />
+              <RoleCard
+                active={form.agent_role === 'seller'}
+                onClick={() => setForm((f) => ({ ...f, agent_role: 'seller' }))}
+                title="Listing Agent"
+                subtitle="Representing the seller"
               />
             </div>
+          </Section>
 
-            {commissionDollar > 0 && (
-              <div className="bg-gold/10 border border-gold/30 rounded-xl px-4 py-3 flex items-center justify-between">
-                <span className="text-navy text-sm font-medium">Estimated Commission</span>
-                <span className="text-navy font-bold text-lg">{formatCurrency(commissionDollar)}</span>
+          {/* Commission */}
+          <Section title="Commission" subtitle="Your share of this transaction">
+            <Field label="Commission %">
+              <div className="relative">
+                <input
+                  type="number"
+                  value={form.commission_pct}
+                  onChange={set('commission_pct')}
+                  className="input-field pr-10"
+                  placeholder="3.0"
+                  inputMode="decimal"
+                  step="0.1"
+                />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-muted font-semibold pointer-events-none">%</span>
+              </div>
+            </Field>
+
+            {(form.sale_price || form.commission_pct) && (
+              <div className="bg-gold/10 border border-gold/30 rounded-xl px-4 py-3 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-semibold text-gold-dark uppercase tracking-wider">Estimated Commission</p>
+                  <p className="text-navy/70 text-xs truncate mt-0.5">
+                    {form.commission_pct || 0}% of {formatCurrency(parseFloat(form.sale_price) || 0)}
+                  </p>
+                </div>
+                <p className="font-display text-2xl font-bold text-gold-dark whitespace-nowrap">
+                  {formatCurrency(commissionDollar)}
+                </p>
               </div>
             )}
-          </div>
-        </section>
+          </Section>
 
-        {/* Timeline */}
-        <section>
-          <p className="section-title">Timeline</p>
-          <div className="space-y-3">
-            <div>
-              <label className="label">Current Phase</label>
-              <select value={form.phase} onChange={set('phase')} className="input-field">
-                {PHASES.map((p) => (
-                  <option key={p} value={p}>{p}</option>
-                ))}
-              </select>
-            </div>
+          {/* Timeline */}
+          <Section title="Timeline" subtitle="Phase and key dates">
+            <Field label="Current Phase">
+              <PhaseSelect value={form.phase} onChange={(v) => setForm((f) => ({ ...f, phase: v }))} />
+            </Field>
 
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="label">Offer Date</label>
+              <Field label="Offer Date">
                 <input type="date" value={form.offer_date} onChange={set('offer_date')} className="input-field" />
-              </div>
-              <div>
-                <label className="label">Closing Date</label>
+              </Field>
+              <Field label="Closing Date">
                 <input type="date" value={form.closing_date} onChange={set('closing_date')} className="input-field" />
-              </div>
+              </Field>
             </div>
-          </div>
-        </section>
+          </Section>
 
-        {/* Buyer */}
-        <section>
-          <p className="section-title">Buyer</p>
-          <div className="space-y-3">
-            <div>
-              <label className="label">Name</label>
-              <input type="text" value={form.buyer_name} onChange={set('buyer_name')} className="input-field" placeholder="John Buyer" />
-            </div>
-            <div>
-              <label className="label">Phone</label>
-              <input type="tel" value={form.buyer_phone} onChange={set('buyer_phone')} className="input-field" placeholder="(813) 555-0100" inputMode="tel" />
-            </div>
-            <div>
-              <label className="label">Email</label>
-              <input type="email" value={form.buyer_email} onChange={set('buyer_email')} className="input-field" placeholder="buyer@email.com" />
-            </div>
-          </div>
-        </section>
+          {/* Buyer */}
+          <Section title="Buyer" subtitle="Buyer's contact info">
+            <ContactFields prefix="buyer" form={form} setForm={setForm} placeholderName="John Buyer" />
+          </Section>
 
-        {/* Seller */}
-        <section>
-          <p className="section-title">Seller</p>
-          <div className="space-y-3">
-            <div>
-              <label className="label">Name</label>
-              <input type="text" value={form.seller_name} onChange={set('seller_name')} className="input-field" placeholder="Jane Seller" />
-            </div>
-            <div>
-              <label className="label">Phone</label>
-              <input type="tel" value={form.seller_phone} onChange={set('seller_phone')} className="input-field" placeholder="(813) 555-0200" inputMode="tel" />
-            </div>
-            <div>
-              <label className="label">Email</label>
-              <input type="email" value={form.seller_email} onChange={set('seller_email')} className="input-field" placeholder="seller@email.com" />
-            </div>
-          </div>
-        </section>
+          {/* Seller */}
+          <Section title="Seller" subtitle="Seller's contact info">
+            <ContactFields prefix="seller" form={form} setForm={setForm} placeholderName="Jane Seller" />
+          </Section>
 
-        {/* Notes */}
-        <section>
-          <p className="section-title">Notes</p>
-          <textarea
-            value={form.notes}
-            onChange={set('notes')}
-            className="input-field resize-none"
-            rows={4}
-            placeholder="Any notes about this transaction…"
-          />
-        </section>
-
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="btn-primary"
-        >
-          {saving ? <LoadingSpinner size="sm" /> : isEdit ? 'Save Changes' : 'Create Deal'}
-        </button>
-
-        <div className="h-4" />
+          {/* Notes */}
+          <Section title="Notes" subtitle="Anything else worth tracking?">
+            <textarea
+              value={form.notes}
+              onChange={set('notes')}
+              className="input-field resize-none"
+              rows={4}
+              placeholder="Lender contact, contingency info, special clauses…"
+            />
+          </Section>
+        </div>
       </div>
+
+      {/* ── Sticky save bar ── */}
+      <div className="fixed bottom-0 left-0 right-0 md:left-[280px] z-40 bg-white border-t border-navy/[0.06] pb-safe">
+        <div className="px-5 md:px-8 py-4 max-w-3xl">
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="btn-primary w-full"
+          >
+            {saving ? (
+              <LoadingSpinner size="sm" />
+            ) : (
+              <>
+                <CheckIcon className="w-5 h-5 mr-2" strokeWidth={2.5} />
+                {isEdit ? 'Save Changes' : 'Save Deal'}
+              </>
+            )}
+          </button>
+          <p className="text-center text-muted text-xs mt-2">
+            You can edit everything later from the deal page.
+          </p>
+        </div>
+      </div>
+    </AppLayout>
+  )
+}
+
+// ─────────────────────────── Sub-components ───────────────────────────
+function Section({ title, subtitle, icon, children }) {
+  return (
+    <section className="card p-5 md:p-6">
+      <div className="flex items-start gap-3 mb-4">
+        {icon && (
+          <span className="w-8 h-8 rounded-xl bg-gold/15 text-gold-dark flex items-center justify-center shrink-0 mt-0.5">
+            {icon}
+          </span>
+        )}
+        <div className="flex-1 min-w-0">
+          <h3 className="font-display text-base font-bold text-navy leading-tight">{title}</h3>
+          {subtitle && <p className="text-muted text-xs mt-0.5">{subtitle}</p>}
+        </div>
+      </div>
+      <div className="space-y-3">{children}</div>
+    </section>
+  )
+}
+
+function Field({ label, required, children }) {
+  return (
+    <div>
+      <label className="label">
+        {label}
+        {required && <span className="text-gold-dark ml-1">*</span>}
+      </label>
+      {children}
     </div>
+  )
+}
+
+function RoleCard({ active, onClick, title, subtitle }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`relative text-left p-4 rounded-xl border-2 transition-all ${
+        active
+          ? 'bg-gold/15 border-gold shadow-card'
+          : 'bg-white border-navy/10 hover:border-gold/40'
+      }`}
+    >
+      <div className="flex items-center justify-between">
+        <h4 className="font-display text-base font-bold text-navy">{title}</h4>
+        <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+          active ? 'bg-gold border-gold' : 'border-navy/20'
+        }`}>
+          {active && <CheckIcon className="w-3 h-3 text-navy" strokeWidth={3} />}
+        </span>
+      </div>
+      <p className="text-muted text-xs mt-1">{subtitle}</p>
+    </button>
+  )
+}
+
+function PhaseSelect({ value, onChange }) {
+  const style = PHASE_STYLES[value]
+  return (
+    <div className="relative">
+      <span className={`absolute left-4 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full ${style.dot} pointer-events-none`} />
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="input-field pl-10 pr-4 appearance-none cursor-pointer"
+      >
+        {PHASES.map((p) => (
+          <option key={p} value={p}>{p}</option>
+        ))}
+      </select>
+      <svg className="w-4 h-4 absolute right-4 top-1/2 -translate-y-1/2 text-muted pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="6 9 12 15 18 9" />
+      </svg>
+    </div>
+  )
+}
+
+function ContactFields({ prefix, form, setForm, placeholderName }) {
+  const set = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }))
+  return (
+    <>
+      <Field label="Name">
+        <input
+          type="text"
+          value={form[`${prefix}_name`]}
+          onChange={set(`${prefix}_name`)}
+          className="input-field"
+          placeholder={placeholderName}
+        />
+      </Field>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Field label="Phone">
+          <input
+            type="tel"
+            value={form[`${prefix}_phone`]}
+            onChange={set(`${prefix}_phone`)}
+            className="input-field"
+            placeholder="(813) 555-0100"
+            inputMode="tel"
+          />
+        </Field>
+        <Field label="Email">
+          <input
+            type="email"
+            value={form[`${prefix}_email`]}
+            onChange={set(`${prefix}_email`)}
+            className="input-field"
+            placeholder="email@example.com"
+          />
+        </Field>
+      </div>
+    </>
   )
 }
