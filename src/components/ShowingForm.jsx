@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import LoadingSpinner from './LoadingSpinner'
-import { XIcon, CheckIcon } from './Icon'
+import { XIcon, CheckIcon, MailIcon, ArrowRightIcon } from './Icon'
 
 // Reusable schedule-showing modal. Used both from DealDetail (with deal
 // pre-fill) and Calendar (no pre-fill, with deal selector). Inserts into
@@ -21,10 +22,20 @@ export default function ShowingForm({
   const [error, setError] = useState(null)
   const [deals, setDeals] = useState([])
 
+  // Agent network notification state
+  const [agents, setAgents] = useState([])
+  const [agentsLoaded, setAgentsLoaded] = useState(false)
+  const [selectedAgentIds, setSelectedAgentIds] = useState(() => new Set())
+  const [previewOpen, setPreviewOpen] = useState(false)
+  const [sendStatus, setSendStatus] = useState(null) // 'sending' | { sent, failed, total }
+
   useEffect(() => {
     if (open) {
       setForm(initialForm(deal))
       setError(null)
+      setSendStatus(null)
+      setSelectedAgentIds(new Set())
+      setPreviewOpen(false)
     }
   }, [open, deal?.id])
 
@@ -38,6 +49,20 @@ export default function ShowingForm({
       .order('created_at', { ascending: false })
       .then(({ data }) => setDeals(data || []))
   }, [open, allowDealPicker, user.id])
+
+  // Load the user's agent network the first time the modal opens
+  useEffect(() => {
+    if (!open || agentsLoaded) return
+    supabase
+      .from('agent_contacts')
+      .select('id, full_name, email, brokerage')
+      .eq('user_id', user.id)
+      .order('full_name', { ascending: true })
+      .then(({ data }) => {
+        setAgents(data || [])
+        setAgentsLoaded(true)
+      })
+  }, [open, user.id, agentsLoaded])
 
   useEffect(() => {
     if (!open) return
@@ -71,12 +96,57 @@ export default function ShowingForm({
       })
       .select().single()
 
-    setSaving(false)
     if (dbErr) {
+      setSaving(false)
       setError(dbErr.message)
       return
     }
+
     onSaved?.(data)
+
+    // If agents were selected, fire the email blast. Showing save is committed
+    // either way — email failure never blocks the save.
+    const selected = agents.filter((a) => selectedAgentIds.has(a.id))
+    if (selected.length > 0) {
+      setSendStatus('sending')
+      try {
+        const { data: profile } = await supabase
+          .from('profiles').select('full_name').eq('id', user.id).single()
+        const agentName = profile?.full_name || user.user_metadata?.full_name || ''
+
+        const resp = await fetch('/api/send-showing-blast', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            agentContacts: selected.map((a) => ({ email: a.email, full_name: a.full_name })),
+            propertyAddress: form.property_address.trim(),
+            showingDate: form.showing_date,
+            showingTime: form.showing_time || null,
+            clientName: form.client_name || null,
+            agentName,
+            agentPhone: null,
+            agentEmail: user.email,
+            notes: form.notes || null,
+          }),
+        })
+        const result = await resp.json().catch(() => ({}))
+        setSendStatus({
+          sent: result.sent || 0,
+          failed: result.failed || 0,
+          total: result.total || selected.length,
+          error: result.error || null,
+        })
+        // Show the result for ~2s, then close
+        setTimeout(() => { setSaving(false); onClose() }, 2000)
+        return
+      } catch {
+        setSendStatus({ sent: 0, failed: selected.length, total: selected.length, error: 'network' })
+        setTimeout(() => { setSaving(false); onClose() }, 2000)
+        return
+      }
+    }
+
+    setSaving(false)
     onClose()
   }
 
@@ -185,40 +255,52 @@ export default function ShowingForm({
             />
           </div>
 
-          {/* ── Notify Agent Network — placeholder, not wired up yet ── */}
-          <div className="rounded-xl border border-navy/[0.08] bg-cream/50 p-4 opacity-80 cursor-not-allowed select-none">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <p className="font-semibold text-sm text-navy/70">Notify Agent Network</p>
-                  <span className="badge-gold">Coming Soon</span>
-                </div>
-                <p className="text-muted text-xs mt-1.5 leading-relaxed">
-                  Automatically blast an email to agents in your network when you schedule a showing. Coming in the next update.
-                </p>
-              </div>
-              <button
-                type="button"
-                disabled
-                aria-disabled="true"
-                tabIndex={-1}
-                className="relative w-12 h-7 rounded-full bg-navy/10 cursor-not-allowed shrink-0 mt-0.5"
-              >
-                <span className="absolute top-1 left-1 w-5 h-5 rounded-full bg-white/70 shadow-soft" />
-              </button>
-            </div>
-          </div>
+          {/* ── Notify Agent Network ── */}
+          <NotifyAgentSection
+            agents={agents}
+            agentsLoaded={agentsLoaded}
+            selectedIds={selectedAgentIds}
+            setSelectedIds={setSelectedAgentIds}
+            previewOpen={previewOpen}
+            setPreviewOpen={setPreviewOpen}
+            form={form}
+          />
         </div>
 
         <div className="px-5 md:px-6 py-4 border-t border-navy/[0.06]">
-          <button onClick={handleSave} disabled={saving} className="btn-primary w-full">
-            {saving ? <LoadingSpinner size="sm" /> : (
-              <>
-                <CheckIcon className="w-5 h-5 mr-2" strokeWidth={2.5} />
-                Schedule Showing
-              </>
-            )}
-          </button>
+          {sendStatus === 'sending' ? (
+            <div className="flex items-center justify-center gap-2 py-3 text-navy text-sm font-semibold">
+              <LoadingSpinner size="sm" />
+              Sending to {selectedAgentIds.size} {selectedAgentIds.size === 1 ? 'agent' : 'agents'}…
+            </div>
+          ) : sendStatus && typeof sendStatus === 'object' ? (
+            <div className={`text-center text-sm font-semibold py-3 rounded-xl ${
+              sendStatus.failed === 0
+                ? 'bg-green-50 text-green-700'
+                : sendStatus.sent === 0
+                ? 'bg-red-50 text-red-700'
+                : 'bg-amber-50 text-amber-700'
+            }`}>
+              {sendStatus.error
+                ? `Couldn't send notifications (${sendStatus.error})`
+                : sendStatus.failed === 0
+                ? `Notified ${sendStatus.sent} ${sendStatus.sent === 1 ? 'agent' : 'agents'}`
+                : sendStatus.sent === 0
+                ? `Sent to 0 of ${sendStatus.total} — all failed`
+                : `Sent to ${sendStatus.sent} of ${sendStatus.total} — some failed`}
+            </div>
+          ) : (
+            <button onClick={handleSave} disabled={saving} className="btn-primary w-full">
+              {saving ? <LoadingSpinner size="sm" /> : (
+                <>
+                  <CheckIcon className="w-5 h-5 mr-2" strokeWidth={2.5} />
+                  {selectedAgentIds.size > 0
+                    ? `Schedule & Notify (${selectedAgentIds.size})`
+                    : 'Schedule Showing'}
+                </>
+              )}
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -234,4 +316,132 @@ function initialForm(deal) {
     client_name: deal?.buyer_name || '',
     notes: '',
   }
+}
+
+// ─────────────────────────── Notify Agent Network section ───────────────────────────
+function NotifyAgentSection({
+  agents, agentsLoaded, selectedIds, setSelectedIds,
+  previewOpen, setPreviewOpen, form,
+}) {
+  const allSelected = agents.length > 0 && selectedIds.size === agents.length
+
+  const toggleAll = () => {
+    if (allSelected) setSelectedIds(new Set())
+    else setSelectedIds(new Set(agents.map((a) => a.id)))
+  }
+
+  const toggleOne = (id) => {
+    const next = new Set(selectedIds)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    setSelectedIds(next)
+  }
+
+  return (
+    <div className="rounded-xl border border-navy/[0.08] bg-white p-4">
+      <div className="flex items-center gap-2">
+        <MailIcon className="w-4 h-4 text-gold-dark" />
+        <p className="font-semibold text-sm text-navy">Notify Agent Network</p>
+      </div>
+
+      {!agentsLoaded ? (
+        <div className="flex justify-center py-4"><LoadingSpinner size="sm" /></div>
+      ) : agents.length === 0 ? (
+        <div className="mt-3 bg-cream rounded-xl p-3">
+          <p className="text-muted text-xs leading-relaxed">
+            No agents in your network yet.{' '}
+            <Link to="/agent-network" className="text-gold-dark font-semibold hover:text-gold transition-colors">
+              Add agents in Agent Network →
+            </Link>
+          </p>
+        </div>
+      ) : (
+        <>
+          {/* Header — count + select all */}
+          <div className="flex items-center justify-between mt-3">
+            <p className="text-muted text-xs">
+              <span className="text-navy font-semibold">{selectedIds.size}</span>{' '}
+              of {agents.length} selected
+            </p>
+            <button
+              type="button"
+              onClick={toggleAll}
+              className="text-xs font-semibold text-gold-dark hover:text-gold transition-colors"
+            >
+              {allSelected ? 'Deselect all' : 'Select all'}
+            </button>
+          </div>
+
+          {/* Agent checkboxes */}
+          <ul className="mt-2 max-h-44 overflow-y-auto rounded-xl border border-navy/[0.06] divide-y divide-navy/[0.04]">
+            {agents.map((a) => {
+              const checked = selectedIds.has(a.id)
+              return (
+                <li key={a.id}>
+                  <label className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-cream/60 transition-colors">
+                    <button
+                      type="button"
+                      onClick={() => toggleOne(a.id)}
+                      className={`w-5 h-5 rounded-md border-2 shrink-0 flex items-center justify-center transition-colors ${
+                        checked ? 'bg-gold border-gold' : 'border-navy/20 bg-white'
+                      }`}
+                      aria-pressed={checked}
+                    >
+                      {checked && <CheckIcon className="w-3 h-3 text-navy" strokeWidth={3} />}
+                    </button>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-navy font-semibold text-sm truncate">{a.full_name}</p>
+                      <p className="text-muted text-[11px] truncate">
+                        {a.email}{a.brokerage && ` · ${a.brokerage}`}
+                      </p>
+                    </div>
+                  </label>
+                </li>
+              )
+            })}
+          </ul>
+
+          {/* Preview */}
+          {selectedIds.size > 0 && (
+            <button
+              type="button"
+              onClick={() => setPreviewOpen((v) => !v)}
+              className="text-xs font-semibold text-gold-dark hover:text-gold transition-colors mt-3 flex items-center gap-1"
+            >
+              {previewOpen ? '−' : '+'} Email preview
+            </button>
+          )}
+
+          {previewOpen && selectedIds.size > 0 && (
+            <EmailPreview form={form} />
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
+function EmailPreview({ form }) {
+  const subject = `Showing Scheduled — ${form.property_address || '…'}`
+  return (
+    <div className="mt-3 bg-cream rounded-xl border border-navy/[0.06] overflow-hidden">
+      <div className="px-4 py-2 border-b border-navy/[0.06] bg-white">
+        <p className="text-[10px] font-bold uppercase tracking-wider text-muted">Subject</p>
+        <p className="text-sm text-navy font-semibold truncate mt-0.5">{subject}</p>
+      </div>
+      <div className="p-4 text-sm text-navy/80 leading-relaxed">
+        <p>A showing has been scheduled. Please inform your clients who may be interested.</p>
+        <div className="mt-3 bg-white rounded-lg p-3 border border-navy/[0.05] space-y-1 text-xs">
+          <p><strong>Property:</strong> {form.property_address || '—'}</p>
+          <p><strong>Date:</strong> {form.showing_date || '—'}</p>
+          <p><strong>Time:</strong> {form.showing_time || 'Time TBD'}</p>
+          {form.client_name && <p><strong>Showing For:</strong> {form.client_name}</p>}
+          {form.notes && <p><strong>Notes:</strong> {form.notes}</p>}
+        </div>
+        <p className="text-muted text-xs mt-3 italic">
+          The full email includes your contact info and DealFlow branding.
+        </p>
+      </div>
+    </div>
+  )
 }

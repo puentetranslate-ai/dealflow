@@ -176,6 +176,17 @@ export const FunnelIcon = (p) => (
   </svg>
 )
 
+export const NetworkIcon = (p) => (
+  <svg viewBox="0 0 24 24" {...stroke} {...p}>
+    <circle cx="12" cy="5" r="2.5" />
+    <circle cx="5" cy="18" r="2.5" />
+    <circle cx="19" cy="18" r="2.5" />
+    <line x1="12" y1="7.5" x2="6.5" y2="16" />
+    <line x1="12" y1="7.5" x2="17.5" y2="16" />
+    <line x1="7.5" y1="18" x2="16.5" y2="18" />
+  </svg>
+)
+
 export const UserPlusIcon = (p) => (
   <svg viewBox="0 0 24 24" {...stroke} {...p}>
     <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />

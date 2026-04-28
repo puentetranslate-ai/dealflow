@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import { useMobileDrawer } from '../context/MobileDrawerContext'
 import {
   HomeIcon, FunnelIcon, UsersIcon, BarChartIcon, SettingsIcon, CalendarIcon,
-  XIcon, LogoutIcon,
+  XIcon, LogoutIcon, NetworkIcon,
 } from './Icon'
 
 const links = [
@@ -15,6 +15,7 @@ const links = [
   { path: '/commission', label: 'Intelligence', Icon: BarChartIcon },
   { path: '/calendar', label: 'Calendar', Icon: CalendarIcon },
   { path: '/settings', label: 'Settings', Icon: SettingsIcon },
+  { path: '/agent-network', label: 'Agent Network', Icon: NetworkIcon },
 ]
 
 // Slide-out mobile drawer. Lives in AppLayout; opened by the hamburger

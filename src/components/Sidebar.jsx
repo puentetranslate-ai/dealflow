@@ -3,7 +3,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import {
-  HomeIcon, UsersIcon, FunnelIcon, BarChartIcon, SettingsIcon, CalendarIcon, LogoutIcon,
+  HomeIcon, UsersIcon, FunnelIcon, BarChartIcon, SettingsIcon, CalendarIcon, LogoutIcon, NetworkIcon,
 } from './Icon'
 
 const links = [
@@ -13,6 +13,7 @@ const links = [
   { path: '/commission', label: 'Intelligence', Icon: BarChartIcon },
   { path: '/calendar', label: 'Calendar', Icon: CalendarIcon },
   { path: '/settings', label: 'Settings', Icon: SettingsIcon },
+  { path: '/agent-network', label: 'Agent Network', Icon: NetworkIcon },
 ]
 
 export default function Sidebar() {

@@ -15,6 +15,7 @@ import Intelligence from './pages/Intelligence'
 import Calendar from './pages/Calendar'
 import Leads from './pages/Leads'
 import LeadForm from './pages/LeadForm'
+import AgentNetwork from './pages/AgentNetwork'
 import Settings from './pages/Settings'
 
 export default function App() {
@@ -44,6 +45,7 @@ export default function App() {
             <Route path="/leads" element={<Leads />} />
             <Route path="/leads/new" element={<LeadForm />} />
             <Route path="/leads/:id/edit" element={<LeadForm />} />
+            <Route path="/agent-network" element={<AgentNetwork />} />
             <Route path="/settings" element={<Settings />} />
           </Route>
 

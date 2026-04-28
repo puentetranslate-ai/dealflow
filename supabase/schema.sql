@@ -395,3 +395,26 @@ ALTER TABLE public.push_subscriptions ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can manage own push subscriptions" ON public.push_subscriptions
   FOR ALL USING (auth.uid() = user_id);
+
+
+-- ── Agent Network ──────────────────────────────────────────
+-- Cooperating agents the user wants to keep on a personal mailing list.
+-- Used by the Showing Blast feature to email a showing announcement to
+-- the agent's network.
+CREATE TABLE IF NOT EXISTS public.agent_contacts (
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id     uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  full_name   text NOT NULL,
+  email       text NOT NULL,
+  phone       text,
+  brokerage   text,
+  notes       text,
+  created_at  timestamptz DEFAULT now()
+);
+
+ALTER TABLE public.agent_contacts ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can manage own agent contacts" ON public.agent_contacts
+  FOR ALL USING (auth.uid() = user_id);
+
+CREATE INDEX IF NOT EXISTS agent_contacts_user_id_idx ON public.agent_contacts (user_id);
