@@ -1,12 +1,12 @@
 // Fetches free-tier FRED economic series via our Vercel serverless proxy
-// at /api/fred/{seriesId}. The proxy fetches FRED's public CSV graph
+// at /api/fred?series={id}. The proxy fetches FRED's public CSV graph
 // endpoint server-side, parses it, and returns JSON — sidestepping CORS.
 //
 // Caches every series in localStorage for 24 hours. Always returns
 // { series: [{date, value}], stale: false } or { error } — never throws.
 
 const CACHE_TTL_HOURS = 24
-const PROXY_BASE = '/api/fred'
+const PROXY_URL = '/api/fred'
 
 const SERIES = {
   mortgage30: 'MORTGAGE30US',     // 30-year fixed mortgage rate (weekly)
@@ -70,7 +70,7 @@ async function fetchSeries(id) {
     : null
 
   try {
-    const res = await fetch(`${PROXY_BASE}/${encodeURIComponent(id)}`, {
+    const res = await fetch(`${PROXY_URL}?series=${encodeURIComponent(id)}`, {
       signal: controller?.signal,
     })
     if (timeoutId) clearTimeout(timeoutId)
