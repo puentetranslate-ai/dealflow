@@ -184,6 +184,30 @@ export default function ShowingForm({
               placeholder="Lockbox code, what to highlight, what to ask…"
             />
           </div>
+
+          {/* ── Notify Agent Network — placeholder, not wired up yet ── */}
+          <div className="rounded-xl border border-navy/[0.08] bg-cream/50 p-4 opacity-80 cursor-not-allowed select-none">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="font-semibold text-sm text-navy/70">Notify Agent Network</p>
+                  <span className="badge-gold">Coming Soon</span>
+                </div>
+                <p className="text-muted text-xs mt-1.5 leading-relaxed">
+                  Automatically blast an email to agents in your network when you schedule a showing. Coming in the next update.
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled
+                aria-disabled="true"
+                tabIndex={-1}
+                className="relative w-12 h-7 rounded-full bg-navy/10 cursor-not-allowed shrink-0 mt-0.5"
+              >
+                <span className="absolute top-1 left-1 w-5 h-5 rounded-full bg-white/70 shadow-soft" />
+              </button>
+            </div>
+          </div>
         </div>
 
         <div className="px-5 md:px-6 py-4 border-t border-navy/[0.06]">

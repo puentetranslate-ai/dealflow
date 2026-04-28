@@ -1,16 +1,12 @@
-// Fetches free-tier FRED economic series via the public CSV endpoint.
-// No API key required for graph CSV.
+// Fetches free-tier FRED economic series via our Vercel serverless proxy
+// at /api/fred/{seriesId}. The proxy fetches FRED's public CSV graph
+// endpoint server-side, parses it, and returns JSON — sidestepping CORS.
 //
 // Caches every series in localStorage for 24 hours. Always returns
 // { series: [{date, value}], stale: false } or { error } — never throws.
-//
-// CORS: FRED's fredgraph.csv endpoint is generally CORS-permissive in modern
-// browsers. If it isn't on a given network, fetches will fail and we return
-// { error: 'unavailable' }; the UI shows a graceful "data unavailable" panel.
-// To work around CORS in production, add a Vercel API route as a proxy.
 
 const CACHE_TTL_HOURS = 24
-const FRED_BASE = 'https://fred.stlouisfed.org/graph/fredgraph.csv'
+const PROXY_BASE = '/api/fred'
 
 const SERIES = {
   mortgage30: 'MORTGAGE30US',     // 30-year fixed mortgage rate (weekly)
@@ -56,22 +52,6 @@ function writeCache(id, series) {
   } catch {}
 }
 
-// Parse FRED CSV: "DATE,SERIES_ID\n2024-01-04,6.62\n..."
-// Skip header + empty values (FRED uses '.' for missing).
-function parseCsv(text) {
-  const lines = text.split(/\r?\n/).filter(Boolean)
-  if (lines.length < 2) return []
-  const out = []
-  for (let i = 1; i < lines.length; i++) {
-    const [date, valueRaw] = lines[i].split(',')
-    if (!date) continue
-    const value = parseFloat(valueRaw)
-    if (Number.isNaN(value)) continue
-    out.push({ date, value })
-  }
-  return out
-}
-
 async function fetchSeries(id) {
   const cached = readCache(id)
   // Return cached immediately if fresh
@@ -80,10 +60,10 @@ async function fetchSeries(id) {
   }
 
   try {
-    const res = await fetch(`${FRED_BASE}?id=${id}`, { mode: 'cors' })
+    const res = await fetch(`${PROXY_BASE}/${encodeURIComponent(id)}`)
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    const text = await res.text()
-    const series = parseCsv(text)
+    const json = await res.json()
+    const series = json.data || []
     if (series.length === 0) throw new Error('Empty series')
     writeCache(id, series)
     return { series, fromCache: false, error: null }

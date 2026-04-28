@@ -2,7 +2,10 @@ import { useState, useEffect, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
-import { PHASES, PHASE_STYLES, LOG_TYPES, DEFAULT_CHECKLIST } from '../lib/constants'
+import {
+  PHASE_STYLES, LOG_TYPES,
+  getPhasesForRole, getDefaultChecklist,
+} from '../lib/constants'
 import {
   formatCurrency, formatDate, formatDateTime, daysUntil, daysInPhase, isPastDue, calcCommission,
 } from '../lib/utils'
@@ -107,8 +110,12 @@ export default function DealDetail() {
   }
 
   const seedChecklist = async () => {
+    // Seed only the phases for the deal's side. (Used when an old deal has
+    // no checklist rows yet — typically because it was created before the
+    // seeding step existed.)
+    const checklist = getDefaultChecklist(deal?.agent_role)
     const items = []
-    for (const [phase, labels] of Object.entries(DEFAULT_CHECKLIST)) {
+    for (const [phase, labels] of Object.entries(checklist)) {
       for (const label of labels) {
         items.push({ deal_id: id, user_id: user.id, label, phase, is_checked: false })
       }
@@ -189,7 +196,9 @@ export default function DealDetail() {
       .sort((a, b) => new Date(a.due_date) - new Date(b.due_date))[0]
   }, [checklistItems])
 
-  const groupedChecklist = PHASES.filter((p) => p !== 'Closed').reduce((acc, phase) => {
+  const dealPhases = getPhasesForRole(deal?.agent_role).filter((p) => p !== 'Closed')
+
+  const groupedChecklist = dealPhases.reduce((acc, phase) => {
     acc[phase] = checklistItems.filter((i) => i.phase === phase)
     return acc
   }, {})
@@ -328,6 +337,7 @@ export default function DealDetail() {
             checklistLoaded ? (
               <ChecklistTab
                 grouped={groupedChecklist}
+                phases={dealPhases}
                 editingId={editingDueDate}
                 onEdit={setEditingDueDate}
                 onToggle={toggleItem}
@@ -390,7 +400,11 @@ export default function DealDetail() {
           {/* Timeline */}
           <div className="card p-5">
             <p className="section-title">Deal Timeline</p>
-            <PhaseTimeline currentPhase={deal.phase} closingDate={deal.closing_date} />
+            <PhaseTimeline
+              currentPhase={deal.phase}
+              closingDate={deal.closing_date}
+              phases={dealPhases}
+            />
           </div>
         </aside>
       </div>
@@ -614,10 +628,10 @@ function ActionBtn({ href, icon, label, disabled }) {
 }
 
 // ─────────────────────────── Checklist tab ───────────────────────────
-function ChecklistTab({ grouped, editingId, onEdit, onToggle, onSaveDate }) {
+function ChecklistTab({ grouped, phases, editingId, onEdit, onToggle, onSaveDate }) {
   return (
     <div className="space-y-5">
-      {PHASES.filter((p) => p !== 'Closed').map((phase) => {
+      {phases.map((phase) => {
         const items = grouped[phase] || []
         if (items.length === 0) return null
         const phaseStyle = PHASE_STYLES[phase]
@@ -832,8 +846,8 @@ function LogTab({ entries, loaded, form, setForm, saving, error, onSave, default
 }
 
 // ─────────────────────────── Vertical phase timeline ───────────────────────────
-function PhaseTimeline({ currentPhase, closingDate }) {
-  const list = PHASES.filter((p) => p !== 'Closed')
+function PhaseTimeline({ currentPhase, closingDate, phases }) {
+  const list = phases
   const currentIdx = list.indexOf(currentPhase)
 
   return (

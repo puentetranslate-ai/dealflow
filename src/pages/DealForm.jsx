@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
-import { PHASES, PHASE_STYLES, DEFAULT_CHECKLIST } from '../lib/constants'
+import {
+  PHASE_STYLES, getPhasesForRole, getDefaultPhaseForRole, getDefaultChecklist,
+} from '../lib/constants'
 import { formatCurrency, calcCommission } from '../lib/utils'
 import AppLayout from '../components/AppLayout'
 import LoadingSpinner from '../components/LoadingSpinner'
@@ -171,8 +173,10 @@ export default function DealForm() {
   }
 
   const seedChecklist = async (dealId) => {
+    // Seed only the phases relevant to the agent's side of the deal.
+    const checklist = getDefaultChecklist(form.agent_role)
     const items = []
-    for (const [phase, labels] of Object.entries(DEFAULT_CHECKLIST)) {
+    for (const [phase, labels] of Object.entries(checklist)) {
       for (const label of labels) {
         items.push({ deal_id: dealId, user_id: user.id, label, phase, is_checked: false })
       }
@@ -272,13 +276,13 @@ export default function DealForm() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <RoleCard
                 active={form.agent_role === 'buyer'}
-                onClick={() => setForm((f) => ({ ...f, agent_role: 'buyer' }))}
+                onClick={() => setForm((f) => switchRole(f, 'buyer'))}
                 title="Buyer's Agent"
                 subtitle="Representing the buyer"
               />
               <RoleCard
                 active={form.agent_role === 'seller'}
-                onClick={() => setForm((f) => ({ ...f, agent_role: 'seller' }))}
+                onClick={() => setForm((f) => switchRole(f, 'seller'))}
                 title="Listing Agent"
                 subtitle="Representing the seller"
               />
@@ -320,7 +324,11 @@ export default function DealForm() {
           {/* Timeline */}
           <Section title="Timeline" subtitle="Phase and key dates">
             <Field label="Current Phase">
-              <PhaseSelect value={form.phase} onChange={(v) => setForm((f) => ({ ...f, phase: v }))} />
+              <PhaseSelect
+                value={form.phase}
+                role={form.agent_role}
+                onChange={(v) => setForm((f) => ({ ...f, phase: v }))}
+              />
             </Field>
 
             <div className="grid grid-cols-2 gap-3">
@@ -438,8 +446,9 @@ function RoleCard({ active, onClick, title, subtitle }) {
   )
 }
 
-function PhaseSelect({ value, onChange }) {
-  const style = PHASE_STYLES[value]
+function PhaseSelect({ value, onChange, role }) {
+  const style = PHASE_STYLES[value] || PHASE_STYLES['Offer Accepted']
+  const phases = getPhasesForRole(role)
   return (
     <div className="relative">
       <span className={`absolute left-4 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full ${style.dot} pointer-events-none`} />
@@ -448,7 +457,7 @@ function PhaseSelect({ value, onChange }) {
         onChange={(e) => onChange(e.target.value)}
         className="input-field pl-10 pr-4 appearance-none cursor-pointer"
       >
-        {PHASES.map((p) => (
+        {phases.map((p) => (
           <option key={p} value={p}>{p}</option>
         ))}
       </select>
@@ -457,6 +466,15 @@ function PhaseSelect({ value, onChange }) {
       </svg>
     </div>
   )
+}
+
+// When the agent flips Buyer's Agent ↔ Listing Agent, the previously chosen
+// phase may no longer apply (e.g. "Searching" doesn't exist on a listing).
+// Reset to the first phase of the new role's path in that case.
+function switchRole(form, newRole) {
+  const validPhases = getPhasesForRole(newRole)
+  const phase = validPhases.includes(form.phase) ? form.phase : getDefaultPhaseForRole(newRole)
+  return { ...form, agent_role: newRole, phase }
 }
 
 function ContactFields({ prefix, form, setForm, placeholderName }) {
