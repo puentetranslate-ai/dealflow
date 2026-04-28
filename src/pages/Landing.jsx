@@ -63,7 +63,7 @@ const STEPS = [
   {
     n: 1,
     title: 'Sign up',
-    body: 'Create your account in 30 seconds. No credit card required for the free trial.',
+    body: "Create your account in 30 seconds. Card required — you won't be charged for 30 days. Cancel anytime.",
   },
   {
     n: 2,
@@ -135,7 +135,7 @@ const FAQS = [
   },
   {
     q: 'What happens after the 30-day trial?',
-    a: 'Your card is automatically charged $15/month on day 31. Cancel anytime before then — no charge, no questions.',
+    a: 'Your card is automatically charged $15/month on day 31. Cancel anytime before then — no charge, no questions asked.',
   },
   {
     q: 'Is my data secure?',
@@ -287,7 +287,7 @@ function Hero() {
           </div>
 
           <div className="mt-6 flex items-center justify-center md:justify-start gap-2 text-white/50 text-xs flex-wrap">
-            <span>No setup fees</span>
+            <span>30-day free trial</span>
             <span>·</span>
             <span>Cancel anytime</span>
             <span>·</span>
@@ -594,14 +594,19 @@ function PricingCard({ tier }) {
 
       <div className="mt-6 pt-6 border-t border-current/[0.08]">
         {tier.available ? (
-          <a
-            href={STRIPE_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block text-center bg-gold hover:bg-gold-light text-navy font-semibold rounded-xl px-5 h-12 leading-[3rem] transition-colors"
-          >
-            {tier.cta}
-          </a>
+          <>
+            <a
+              href={STRIPE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block text-center bg-gold hover:bg-gold-light text-navy font-semibold rounded-xl px-5 h-12 leading-[3rem] transition-colors"
+            >
+              {tier.cta}
+            </a>
+            <p className={`text-center text-xs mt-3 ${isHero ? 'text-white/60' : 'text-muted'}`}>
+              Beta testers — enter your code at checkout for $0 setup fee.
+            </p>
+          </>
         ) : (
           <span className="block text-center bg-navy/[0.06] text-navy/40 font-semibold rounded-xl px-5 h-12 leading-[3rem] cursor-not-allowed">
             {tier.cta}
