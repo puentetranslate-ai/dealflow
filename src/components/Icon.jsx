@@ -155,6 +155,51 @@ export const LogoutIcon = (p) => (
   </svg>
 )
 
+export const MenuIcon = (p) => (
+  <svg viewBox="0 0 24 24" {...stroke} {...p}>
+    <line x1="3" y1="6" x2="21" y2="6" />
+    <line x1="3" y1="12" x2="21" y2="12" />
+    <line x1="3" y1="18" x2="21" y2="18" />
+  </svg>
+)
+
+export const XIcon = (p) => (
+  <svg viewBox="0 0 24 24" {...stroke} {...p}>
+    <line x1="18" y1="6" x2="6" y2="18" />
+    <line x1="6" y1="6" x2="18" y2="18" />
+  </svg>
+)
+
+export const FunnelIcon = (p) => (
+  <svg viewBox="0 0 24 24" {...stroke} {...p}>
+    <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" />
+  </svg>
+)
+
+export const UserPlusIcon = (p) => (
+  <svg viewBox="0 0 24 24" {...stroke} {...p}>
+    <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+    <circle cx="8.5" cy="7" r="4" />
+    <line x1="20" y1="8" x2="20" y2="14" />
+    <line x1="23" y1="11" x2="17" y2="11" />
+  </svg>
+)
+
+export const FlameIcon = (p) => (
+  <svg viewBox="0 0 24 24" {...stroke} {...p}>
+    <path d="M8.5 14.5A2.5 2.5 0 0011 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 11-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 002.5 2.5z" />
+  </svg>
+)
+
+export const TrashIcon = (p) => (
+  <svg viewBox="0 0 24 24" {...stroke} {...p}>
+    <polyline points="3 6 5 6 21 6" />
+    <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+    <path d="M10 11v6M14 11v6" />
+    <path d="M9 6V4a2 2 0 012-2h2a2 2 0 012 2v2" />
+  </svg>
+)
+
 export const PhaseDotIcons = {
   Call: PhoneIcon,
   Text: MessageIcon,

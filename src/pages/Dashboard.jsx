@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
-import { formatCurrency, calcCommission, daysUntil } from '../lib/utils'
+import { formatCurrency, calcCommission, daysUntil, isPastDue } from '../lib/utils'
+import { TEMP_STYLES } from '../lib/leadConstants'
 import AppLayout from '../components/AppLayout'
 import TopBar from '../components/TopBar'
 import MobileHeader from '../components/MobileHeader'
@@ -12,7 +13,7 @@ import StatCard from '../components/StatCard'
 import PipelineBar from '../components/PipelineBar'
 import LoadingSpinner from '../components/LoadingSpinner'
 import Fab from '../components/Fab'
-import { ArrowRightIcon, BellIcon } from '../components/Icon'
+import { ArrowRightIcon, BellIcon, FunnelIcon } from '../components/Icon'
 
 const SORT_OPTIONS = [
   { id: 'created_desc', label: 'Newest first' },
@@ -45,6 +46,7 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const [deals, setDeals] = useState([])
   const [deadlineItems, setDeadlineItems] = useState([])
+  const [leads, setLeads] = useState([])
   const [profileName, setProfileName] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -56,7 +58,7 @@ export default function Dashboard() {
     try {
       setLoading(true)
 
-      const [profileRes, dealsRes] = await Promise.all([
+      const [profileRes, dealsRes, leadsRes] = await Promise.all([
         supabase.from('profiles').select('full_name').eq('id', user.id).single(),
         supabase
           .from('deals')
@@ -64,11 +66,17 @@ export default function Dashboard() {
           .eq('user_id', user.id)
           .neq('phase', 'Closed')
           .order('created_at', { ascending: false }),
+        supabase
+          .from('leads')
+          .select('id, temperature, follow_up_date, converted_to_deal_id')
+          .eq('user_id', user.id)
+          .is('converted_to_deal_id', null),
       ])
 
       setProfileName(profileRes.data?.full_name || user.user_metadata?.full_name || '')
       if (dealsRes.error) throw dealsRes.error
       setDeals(dealsRes.data || [])
+      setLeads(leadsRes.data || [])
 
       const today = new Date().toISOString().split('T')[0]
       const nextWeek = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0]
@@ -256,6 +264,9 @@ export default function Dashboard() {
           <PipelineBar deals={deals} />
         </div>
 
+        {/* ── Leads Pipeline ── */}
+        <LeadsPipelineCard leads={leads} onClick={() => navigate('/leads')} />
+
         {/* ── Active Transactions ── */}
         <div className="mt-6">
           <div className="flex items-center justify-between mb-4">
@@ -311,6 +322,66 @@ export default function Dashboard() {
 
       <Fab />
     </AppLayout>
+  )
+}
+
+function LeadsPipelineCard({ leads, onClick }) {
+  const counts = { Hot: 0, Warm: 0, Cold: 0 }
+  let needFollowUp = 0
+  const todayKey = new Date().toISOString().split('T')[0]
+  leads.forEach((l) => {
+    if (counts[l.temperature] != null) counts[l.temperature]++
+    if (l.follow_up_date && (l.follow_up_date <= todayKey || isPastDue(l.follow_up_date))) {
+      needFollowUp++
+    }
+  })
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="card-hover w-full text-left p-5 md:p-6 mt-4 md:mt-5 group"
+    >
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <span className="w-9 h-9 rounded-xl bg-gold/15 text-gold-dark flex items-center justify-center shrink-0">
+            <FunnelIcon className="w-4 h-4" />
+          </span>
+          <div>
+            <p className="section-title mb-0">Leads Pipeline</p>
+            <p className="text-navy font-semibold text-sm mt-1">
+              {leads.length} active {leads.length === 1 ? 'lead' : 'leads'}
+            </p>
+          </div>
+        </div>
+        <ArrowRightIcon className="w-4 h-4 text-muted group-hover:text-gold-dark transition-colors" />
+      </div>
+
+      <div className="grid grid-cols-3 gap-2 md:gap-3">
+        {['Hot', 'Warm', 'Cold'].map((t) => {
+          const style = TEMP_STYLES[t]
+          return (
+            <div
+              key={t}
+              className={`rounded-xl px-3 py-3 ${style.soft} flex items-center gap-2`}
+            >
+              <span className={`w-2.5 h-2.5 rounded-full ${style.dot}`} />
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-navy/60 leading-none">{t}</p>
+                <p className="font-display text-xl font-bold text-navy mt-1 leading-none">{counts[t]}</p>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {needFollowUp > 0 && (
+        <p className="text-red-600 text-xs font-semibold mt-3 flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+          {needFollowUp} {needFollowUp === 1 ? 'lead needs' : 'leads need'} follow-up today
+        </p>
+      )}
+    </button>
   )
 }
 

@@ -156,3 +156,49 @@ CREATE POLICY "Users can insert own comm logs"
 CREATE INDEX IF NOT EXISTS comm_logs_deal_id_idx ON public.comm_logs (deal_id);
 CREATE INDEX IF NOT EXISTS comm_logs_user_id_idx ON public.comm_logs (user_id);
 CREATE INDEX IF NOT EXISTS comm_logs_logged_at_idx ON public.comm_logs (logged_at DESC);
+
+
+-- ── Leads ──────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.leads (
+  id                    uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id               uuid NOT NULL REFERENCES auth.users ON DELETE CASCADE,
+  first_name            text NOT NULL,
+  last_name             text NOT NULL,
+  phone                 text,
+  email                 text,
+  source                text NOT NULL DEFAULT 'Other',
+  referrer_name         text,
+  temperature           text NOT NULL DEFAULT 'Warm' CHECK (temperature IN ('Hot', 'Warm', 'Cold')),
+  interest_type         text NOT NULL DEFAULT 'Buying' CHECK (interest_type IN ('Buying', 'Selling')),
+  budget_min            numeric,
+  budget_max            numeric,
+  target_area           text,
+  notes                 text,
+  follow_up_date        date,
+  converted_to_deal_id  uuid REFERENCES public.deals(id) ON DELETE SET NULL,
+  created_at            timestamptz DEFAULT now(),
+  updated_at            timestamptz DEFAULT now()
+);
+
+ALTER TABLE public.leads ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own leads"
+  ON public.leads FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own leads"
+  ON public.leads FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own leads"
+  ON public.leads FOR UPDATE
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own leads"
+  ON public.leads FOR DELETE
+  USING (auth.uid() = user_id);
+
+CREATE INDEX IF NOT EXISTS leads_user_id_idx ON public.leads (user_id);
+CREATE INDEX IF NOT EXISTS leads_temperature_idx ON public.leads (temperature);
+CREATE INDEX IF NOT EXISTS leads_follow_up_date_idx ON public.leads (follow_up_date) WHERE follow_up_date IS NOT NULL;
+CREATE INDEX IF NOT EXISTS leads_converted_idx ON public.leads (converted_to_deal_id) WHERE converted_to_deal_id IS NOT NULL;

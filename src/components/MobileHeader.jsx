@@ -1,8 +1,13 @@
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeftIcon, BellIcon } from './Icon'
+import { ArrowLeftIcon, BellIcon, MenuIcon } from './Icon'
+import { useMobileDrawer } from '../context/MobileDrawerContext'
 
 // Standard mobile navy header used at the top of pages on small screens.
 // Hidden on md+ where the sidebar takes over.
+//
+// By default the left slot shows a hamburger that opens the drawer.
+// Pass `showBack` to swap the hamburger for a back button.
+// Pass a custom `leftSlot` to override entirely.
 
 export default function MobileHeader({
   title,
@@ -15,7 +20,33 @@ export default function MobileHeader({
   variant = 'navy',
 }) {
   const navigate = useNavigate()
+  const { setOpen } = useMobileDrawer()
   const isNavy = variant === 'navy'
+
+  let resolvedLeft
+  if (leftSlot) {
+    resolvedLeft = leftSlot
+  } else if (showBack) {
+    resolvedLeft = (
+      <button
+        onClick={() => navigate(-1)}
+        className={`-ml-2 w-10 h-10 flex items-center justify-center rounded-full ${isNavy ? 'text-white/70 hover:text-white hover:bg-white/[0.06]' : 'text-navy/60 hover:text-navy hover:bg-navy/[0.06]'} transition-colors`}
+        aria-label="Back"
+      >
+        <ArrowLeftIcon className="w-5 h-5" />
+      </button>
+    )
+  } else {
+    resolvedLeft = (
+      <button
+        onClick={() => setOpen(true)}
+        className={`-ml-2 w-10 h-10 flex items-center justify-center rounded-full ${isNavy ? 'text-white/80 hover:text-white hover:bg-white/[0.06]' : 'text-navy/70 hover:text-navy hover:bg-navy/[0.06]'} transition-colors`}
+        aria-label="Open menu"
+      >
+        <MenuIcon className="w-5 h-5" />
+      </button>
+    )
+  }
 
   return (
     <header
@@ -24,24 +55,14 @@ export default function MobileHeader({
       }`}
     >
       <div className={`px-5 ${isNavy ? 'gold-grid-bg' : ''}`}>
-        <div className="pt-5 pb-4">
-          <div className="flex items-center justify-between min-h-[36px]">
-            <div className="flex items-center gap-2">
-              {showBack ? (
-                <button
-                  onClick={() => navigate(-1)}
-                  className={`-ml-2 p-2 ${isNavy ? 'text-white/70 hover:text-white' : 'text-navy/60 hover:text-navy'}`}
-                  aria-label="Back"
-                >
-                  <ArrowLeftIcon className="w-5 h-5" />
-                </button>
-              ) : leftSlot}
-            </div>
+        <div className="pt-3 pb-4">
+          <div className="flex items-center justify-between min-h-[40px]">
+            <div className="flex items-center gap-2">{resolvedLeft}</div>
             <div className="flex items-center gap-1">
               {showBell && (
                 <button
                   aria-label="Notifications"
-                  className={`p-2 ${isNavy ? 'text-white/70 hover:text-white' : 'text-navy/60 hover:text-navy'}`}
+                  className={`w-10 h-10 flex items-center justify-center rounded-full ${isNavy ? 'text-white/70 hover:text-white hover:bg-white/[0.06]' : 'text-navy/60 hover:text-navy hover:bg-navy/[0.06]'} transition-colors`}
                 >
                   <BellIcon className="w-5 h-5" />
                 </button>

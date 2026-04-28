@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import {
-  HomeIcon, UsersIcon, DollarIcon, SettingsIcon, CalendarIcon, LogoutIcon,
+  HomeIcon, UsersIcon, FunnelIcon, DollarIcon, SettingsIcon, CalendarIcon, LogoutIcon,
 } from './Icon'
 
 const links = [
   { path: '/dashboard', label: 'Dashboard', Icon: HomeIcon },
   { path: '/clients', label: 'Clients', Icon: UsersIcon },
+  { path: '/leads', label: 'Leads', Icon: FunnelIcon, badgeKey: 'leads' },
   { path: '/commission', label: 'Commission', Icon: DollarIcon },
   { path: '/calendar', label: 'Calendar', Icon: CalendarIcon, comingSoon: true },
   { path: '/settings', label: 'Settings', Icon: SettingsIcon },
@@ -17,15 +18,14 @@ const links = [
 export default function Sidebar() {
   const { user, signOut } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const [fullName, setFullName] = useState('')
+  const [activeLeadsCount, setActiveLeadsCount] = useState(0)
 
   useEffect(() => {
     let cancelled = false
     supabase
-      .from('profiles')
-      .select('full_name')
-      .eq('id', user.id)
-      .single()
+      .from('profiles').select('full_name').eq('id', user.id).single()
       .then(({ data }) => {
         if (!cancelled) {
           setFullName(data?.full_name || user.user_metadata?.full_name || '')
@@ -34,18 +34,31 @@ export default function Sidebar() {
     return () => { cancelled = true }
   }, [user.id])
 
+  // Active = leads not yet converted. Re-fetched whenever the route changes
+  // so the badge stays fresh after add/edit/convert flows.
+  useEffect(() => {
+    let cancelled = false
+    supabase
+      .from('leads')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .is('converted_to_deal_id', null)
+      .then(({ count }) => {
+        if (!cancelled && typeof count === 'number') setActiveLeadsCount(count)
+      })
+    return () => { cancelled = true }
+  }, [user.id, location.pathname])
+
   const handleSignOut = async () => {
     await signOut()
     navigate('/login', { replace: true })
   }
 
   const initials = (fullName || user.email || '?')
-    .split(/[\s@]+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((s) => s[0])
-    .join('')
-    .toUpperCase()
+    .split(/[\s@]+/).filter(Boolean).slice(0, 2)
+    .map((s) => s[0]).join('').toUpperCase()
+
+  const badges = { leads: activeLeadsCount }
 
   return (
     <aside className="hidden md:flex flex-col fixed left-0 top-0 bottom-0 w-[280px] bg-navy text-white z-40">
@@ -59,7 +72,7 @@ export default function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto">
-        {links.map(({ path, label, Icon, comingSoon }) =>
+        {links.map(({ path, label, Icon, comingSoon, badgeKey }) =>
           comingSoon ? (
             <div
               key={path}
@@ -81,7 +94,12 @@ export default function Sidebar() {
               }
             >
               <Icon className="w-5 h-5" />
-              <span className="text-sm">{label}</span>
+              <span className="text-sm flex-1">{label}</span>
+              {badgeKey && badges[badgeKey] > 0 && (
+                <span className="bg-gold text-navy text-[10px] font-bold rounded-full min-w-[20px] h-5 px-1.5 flex items-center justify-center">
+                  {badges[badgeKey]}
+                </span>
+              )}
             </NavLink>
           )
         )}

@@ -10,6 +10,8 @@ import DealForm from './pages/DealForm'
 import DealDetail from './pages/DealDetail'
 import ClientDirectory from './pages/ClientDirectory'
 import CommissionTracker from './pages/CommissionTracker'
+import Leads from './pages/Leads'
+import LeadForm from './pages/LeadForm'
 import Settings from './pages/Settings'
 
 export default function App() {
@@ -30,6 +32,9 @@ export default function App() {
             <Route path="deals/:id/edit" element={<DealForm />} />
             <Route path="clients" element={<ClientDirectory />} />
             <Route path="commission" element={<CommissionTracker />} />
+            <Route path="leads" element={<Leads />} />
+            <Route path="leads/new" element={<LeadForm />} />
+            <Route path="leads/:id/edit" element={<LeadForm />} />
             <Route path="settings" element={<Settings />} />
           </Route>
 

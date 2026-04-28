@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { PHASES, PHASE_STYLES, DEFAULT_CHECKLIST } from '../lib/constants'
 import { formatCurrency, calcCommission } from '../lib/utils'
 import AppLayout from '../components/AppLayout'
 import LoadingSpinner from '../components/LoadingSpinner'
-import { CheckIcon, ArrowLeftIcon, UsersIcon, HomeIcon } from '../components/Icon'
+import { CheckIcon, ArrowLeftIcon, UsersIcon, HomeIcon, FunnelIcon } from '../components/Icon'
 
 const BLANK = {
   address: '',
@@ -26,16 +26,24 @@ export default function DealForm() {
   const isEdit = Boolean(id)
   const navigate = useNavigate()
   const { user } = useAuth()
+  const [searchParams] = useSearchParams()
+  const fromLeadId = searchParams.get('fromLead')
   const [form, setForm] = useState(BLANK)
   const [originalPhase, setOriginalPhase] = useState(null)
-  const [loading, setLoading] = useState(isEdit)
+  const [loading, setLoading] = useState(isEdit || Boolean(fromLeadId))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
+  const [sourceLead, setSourceLead] = useState(null)
 
   useEffect(() => {
-    if (isEdit) fetchDeal()
-    else loadDefaultCommission()
-  }, [id])
+    if (isEdit) {
+      fetchDeal()
+    } else if (fromLeadId) {
+      prefillFromLead(fromLeadId)
+    } else {
+      loadDefaultCommission()
+    }
+  }, [id, fromLeadId])
 
   const loadDefaultCommission = async () => {
     const { data } = await supabase
@@ -44,6 +52,37 @@ export default function DealForm() {
     if (data?.default_commission_pct != null) {
       setForm((f) => ({ ...f, commission_pct: String(data.default_commission_pct) }))
     }
+  }
+
+  const prefillFromLead = async (leadId) => {
+    const [leadRes, profileRes] = await Promise.all([
+      supabase.from('leads').select('*').eq('id', leadId).eq('user_id', user.id).single(),
+      supabase.from('profiles').select('default_commission_pct').eq('id', user.id).single(),
+    ])
+    const lead = leadRes.data
+    if (!lead) {
+      navigate('/leads', { replace: true })
+      return
+    }
+    setSourceLead(lead)
+    const isBuyerSide = lead.interest_type === 'Buying'
+    const fullName = `${lead.first_name || ''} ${lead.last_name || ''}`.trim()
+    setForm((f) => ({
+      ...f,
+      agent_role: isBuyerSide ? 'buyer' : 'seller',
+      commission_pct: profileRes.data?.default_commission_pct != null
+        ? String(profileRes.data.default_commission_pct)
+        : f.commission_pct,
+      buyer_name: isBuyerSide ? fullName : '',
+      buyer_phone: isBuyerSide ? (lead.phone || '') : '',
+      buyer_email: isBuyerSide ? (lead.email || '') : '',
+      seller_name: !isBuyerSide ? fullName : '',
+      seller_phone: !isBuyerSide ? (lead.phone || '') : '',
+      seller_email: !isBuyerSide ? (lead.email || '') : '',
+      notes: lead.notes || '',
+      address: lead.target_area ? lead.target_area : f.address,
+    }))
+    setLoading(false)
   }
 
   const fetchDeal = async () => {
@@ -103,14 +142,27 @@ export default function DealForm() {
       if (isEdit) {
         const { error } = await supabase.from('deals').update(payload).eq('id', id).eq('user_id', user.id)
         if (error) throw error
+        navigate(-1)
       } else {
         const { data, error } = await supabase.from('deals')
           .insert({ ...payload, user_id: user.id, phase_changed_at: now, created_at: now })
           .select().single()
         if (error) throw error
         await seedChecklist(data.id)
+
+        // If this deal was spawned from a lead, mark the lead as converted
+        // and route the agent to the new deal so they see the result of the convert.
+        if (sourceLead) {
+          await supabase
+            .from('leads')
+            .update({ converted_to_deal_id: data.id, updated_at: now })
+            .eq('id', sourceLead.id)
+            .eq('user_id', user.id)
+          navigate(`/deals/${data.id}`, { replace: true })
+        } else {
+          navigate(-1)
+        }
       }
-      navigate(-1)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -131,7 +183,7 @@ export default function DealForm() {
 
   if (loading) {
     return (
-      <AppLayout hideBottomNav>
+      <AppLayout>
         <div className="min-h-screen flex items-center justify-center">
           <LoadingSpinner />
         </div>
@@ -140,7 +192,7 @@ export default function DealForm() {
   }
 
   return (
-    <AppLayout hideBottomNav>
+    <AppLayout>
       {/* ── Header (mobile + desktop, navy with gold-grid texture) ── */}
       <header className="bg-navy text-white pt-safe gold-grid-bg">
         <div className="px-5 md:px-8 pt-6 pb-7">
@@ -165,6 +217,22 @@ export default function DealForm() {
       </header>
 
       <div className="px-5 md:px-8 pt-6 pb-32 md:pb-12 max-w-3xl">
+        {sourceLead && (
+          <div className="bg-gold/10 border border-gold/30 rounded-xl px-4 py-3 mb-5 flex items-center gap-3">
+            <span className="w-9 h-9 rounded-xl bg-gold/20 text-gold-dark flex items-center justify-center shrink-0">
+              <FunnelIcon className="w-4 h-4" />
+            </span>
+            <div className="flex-1 min-w-0">
+              <p className="text-navy text-sm font-semibold">
+                Converting from lead: {sourceLead.first_name} {sourceLead.last_name}
+              </p>
+              <p className="text-muted text-xs">
+                We prefilled what we knew. Add the property address and any missing fields, then save.
+              </p>
+            </div>
+          </div>
+        )}
+
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-5 text-red-600 text-sm">
             {error}

@@ -101,7 +101,8 @@
 
   /* ── FAB ── */
   .fab {
-    @apply fixed bottom-24 right-4 w-14 h-14 bg-gold rounded-full shadow-pop flex items-center justify-center z-40 active:scale-95 transition-transform md:hidden;
+    @apply fixed bottom-6 right-4 w-14 h-14 bg-gold rounded-full shadow-pop flex items-center justify-center z-40 active:scale-95 hover:bg-gold-light transition-all md:hidden;
+    bottom: max(1.5rem, env(safe-area-inset-bottom));
   }
 }
 
