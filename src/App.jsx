@@ -11,7 +11,8 @@ import Dashboard from './pages/Dashboard'
 import DealForm from './pages/DealForm'
 import DealDetail from './pages/DealDetail'
 import ClientDirectory from './pages/ClientDirectory'
-import CommissionTracker from './pages/CommissionTracker'
+import Intelligence from './pages/Intelligence'
+import Calendar from './pages/Calendar'
 import Leads from './pages/Leads'
 import LeadForm from './pages/LeadForm'
 import Settings from './pages/Settings'
@@ -38,7 +39,8 @@ export default function App() {
             <Route path="/deals/:id" element={<DealDetail />} />
             <Route path="/deals/:id/edit" element={<DealForm />} />
             <Route path="/clients" element={<ClientDirectory />} />
-            <Route path="/commission" element={<CommissionTracker />} />
+            <Route path="/commission" element={<Intelligence />} />
+            <Route path="/calendar" element={<Calendar />} />
             <Route path="/leads" element={<Leads />} />
             <Route path="/leads/new" element={<LeadForm />} />
             <Route path="/leads/:id/edit" element={<LeadForm />} />

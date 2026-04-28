@@ -3,15 +3,15 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import {
-  HomeIcon, UsersIcon, FunnelIcon, DollarIcon, SettingsIcon, CalendarIcon, LogoutIcon,
+  HomeIcon, UsersIcon, FunnelIcon, BarChartIcon, SettingsIcon, CalendarIcon, LogoutIcon,
 } from './Icon'
 
 const links = [
   { path: '/dashboard', label: 'Dashboard', Icon: HomeIcon },
   { path: '/clients', label: 'Clients', Icon: UsersIcon },
   { path: '/leads', label: 'Leads', Icon: FunnelIcon, badgeKey: 'leads' },
-  { path: '/commission', label: 'Commission', Icon: DollarIcon },
-  { path: '/calendar', label: 'Calendar', Icon: CalendarIcon, comingSoon: true },
+  { path: '/commission', label: 'Intelligence', Icon: BarChartIcon },
+  { path: '/calendar', label: 'Calendar', Icon: CalendarIcon },
   { path: '/settings', label: 'Settings', Icon: SettingsIcon },
 ]
 

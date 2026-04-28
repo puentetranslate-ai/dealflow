@@ -4,12 +4,12 @@ import { format, subMonths, startOfMonth, parseISO, addDays, isWithinInterval } 
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { formatCurrency, formatDate, calcCommission } from '../lib/utils'
-import AppLayout from '../components/AppLayout'
-import TopBar from '../components/TopBar'
-import MobileHeader from '../components/MobileHeader'
 import PhaseBadge from '../components/PhaseBadge'
 import LoadingSpinner from '../components/LoadingSpinner'
 import { ArrowRightIcon, DollarIcon } from '../components/Icon'
+
+// CommissionTracker renders the body of the Commission tab inside Intelligence.
+// It does NOT render its own AppLayout/header — Intelligence provides the chrome.
 
 export default function CommissionTracker() {
   const { user } = useAuth()
@@ -108,17 +108,8 @@ export default function CommissionTracker() {
   }, [view, sort, openDeals, closedDeals])
 
   return (
-    <AppLayout>
-      <MobileHeader eyebrow="TRACKER" title="Commission" showBell />
-      <TopBar />
-
-      <div className="hidden md:block px-8 pt-2 pb-3">
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Tracker</p>
-        <h1 className="font-display text-3xl font-bold text-navy mt-1">Commission</h1>
-      </div>
-
-      <div className="px-5 md:px-8 pt-4 pb-32 md:pb-12">
-        {loading ? (
+    <div className="px-5 md:px-8 pt-4 pb-32 md:pb-12">
+      {loading ? (
           <div className="flex justify-center py-16"><LoadingSpinner /></div>
         ) : (
           <>
@@ -226,8 +217,7 @@ export default function CommissionTracker() {
             )}
           </>
         )}
-      </div>
-    </AppLayout>
+    </div>
   )
 }
 

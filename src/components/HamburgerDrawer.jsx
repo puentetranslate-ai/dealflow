@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { useMobileDrawer } from '../context/MobileDrawerContext'
 import {
-  HomeIcon, FunnelIcon, UsersIcon, DollarIcon, SettingsIcon, CalendarIcon,
+  HomeIcon, FunnelIcon, UsersIcon, BarChartIcon, SettingsIcon, CalendarIcon,
   XIcon, LogoutIcon,
 } from './Icon'
 
@@ -12,8 +12,8 @@ const links = [
   { path: '/dashboard', label: 'Home', Icon: HomeIcon },
   { path: '/leads', label: 'Leads', Icon: FunnelIcon },
   { path: '/clients', label: 'Clients', Icon: UsersIcon },
-  { path: '/commission', label: 'Commission', Icon: DollarIcon },
-  { path: '/calendar', label: 'Calendar', Icon: CalendarIcon, comingSoon: true },
+  { path: '/commission', label: 'Intelligence', Icon: BarChartIcon },
+  { path: '/calendar', label: 'Calendar', Icon: CalendarIcon },
   { path: '/settings', label: 'Settings', Icon: SettingsIcon },
 ]
 
