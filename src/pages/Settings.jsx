@@ -6,7 +6,10 @@ import AppLayout from '../components/AppLayout'
 import TopBar from '../components/TopBar'
 import MobileHeader from '../components/MobileHeader'
 import LoadingSpinner from '../components/LoadingSpinner'
-import { LogoutIcon, LockIcon, EyeIcon, EyeOffIcon, CheckIcon } from '../components/Icon'
+import { LogoutIcon, LockIcon, EyeIcon, EyeOffIcon, CheckIcon, BellIcon } from '../components/Icon'
+import {
+  isPushSupported, getNotificationPermission, subscribeToPush, unsubscribeFromPush,
+} from '../lib/pushNotifications'
 
 export default function Settings() {
   const { user, signOut, updatePassword } = useAuth()
@@ -225,6 +228,9 @@ export default function Settings() {
             </div>
           </div>
 
+          {/* Notifications */}
+          <NotificationsCard userId={user.id} />
+
           {/* Upgrade card */}
           <div className="rounded-2xl bg-navy text-white p-6 md:p-7 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-48 h-48 bg-gold/10 rounded-full -translate-y-16 translate-x-12 pointer-events-none" />
@@ -268,6 +274,129 @@ function SectionHeader({ title, subtitle }) {
     <div>
       <h2 className="font-display text-lg font-bold text-navy">{title}</h2>
       {subtitle && <p className="text-muted text-xs mt-0.5">{subtitle}</p>}
+    </div>
+  )
+}
+
+// ─────────────────────────── Notifications card ───────────────────────────
+const NOTIF_TYPES = [
+  { id: 'deadlines',  label: 'Checklist deadlines',    desc: 'Due-today + overdue items' },
+  { id: 'leads',      label: 'Lead follow-ups',        desc: 'Reminders for follow-up dates' },
+  { id: 'showings',   label: 'Showings',               desc: '2 hours before a showing' },
+  { id: 'closings',   label: 'Closings',               desc: '7 and 1 days before closing' },
+]
+
+function NotificationsCard({ userId }) {
+  const [supported] = useState(() => isPushSupported())
+  const [permission, setPermission] = useState(() => getNotificationPermission())
+  const [enabled, setEnabled] = useState(() => permission === 'granted' && localStorage.getItem('push-enabled') === 'true')
+  const [working, setWorking] = useState(false)
+  const [error, setError] = useState(null)
+  const [types, setTypes] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('notif-types') || '{}') }
+    catch { return {} }
+  })
+
+  const saveTypes = (next) => {
+    setTypes(next)
+    localStorage.setItem('notif-types', JSON.stringify(next))
+  }
+
+  const handleToggle = async () => {
+    setError(null); setWorking(true)
+    try {
+      if (enabled) {
+        await unsubscribeFromPush(userId)
+        localStorage.setItem('push-enabled', 'false')
+        setEnabled(false)
+      } else {
+        await subscribeToPush(userId)
+        localStorage.setItem('push-enabled', 'true')
+        setEnabled(true)
+        setPermission('granted')
+      }
+    } catch (e) {
+      setError(e.message)
+    }
+    setWorking(false)
+  }
+
+  return (
+    <div className="card p-5 md:p-6">
+      <div className="flex items-start gap-3">
+        <span className="w-9 h-9 rounded-xl bg-gold/15 text-gold-dark flex items-center justify-center shrink-0 mt-0.5">
+          <BellIcon className="w-4 h-4" />
+        </span>
+        <div className="flex-1">
+          <SectionHeader title="Notifications" subtitle="Get nudges for what's due today and what's coming up." />
+        </div>
+      </div>
+
+      {!supported && (
+        <p className="text-muted text-xs mt-3">
+          This browser doesn't support web push notifications.
+        </p>
+      )}
+
+      {supported && permission === 'denied' && (
+        <p className="text-red-500 text-xs mt-3">
+          Notifications are blocked at the browser level. Update your browser's site settings to enable them, then come back.
+        </p>
+      )}
+
+      {supported && permission !== 'denied' && (
+        <>
+          <div className="flex items-center justify-between mt-4 py-1">
+            <div>
+              <p className="text-navy font-semibold text-sm">Enable push notifications</p>
+              <p className="text-muted text-xs mt-0.5">
+                Browser will ask for permission the first time you turn this on.
+              </p>
+            </div>
+            <button
+              onClick={handleToggle}
+              disabled={working}
+              aria-pressed={enabled}
+              className={`relative w-12 h-7 rounded-full transition-colors ${enabled ? 'bg-gold' : 'bg-navy/15'}`}
+            >
+              <span className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow-soft transition-transform ${enabled ? 'translate-x-6' : 'translate-x-1'}`} />
+            </button>
+          </div>
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-xl px-3 py-2 mt-3 text-red-600 text-xs">
+              {error}
+            </div>
+          )}
+
+          {enabled && (
+            <div className="mt-4 pt-4 border-t border-navy/[0.05] space-y-3">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted">Send me notifications for</p>
+              {NOTIF_TYPES.map((t) => {
+                const on = types[t.id] !== false // default true
+                return (
+                  <div key={t.id} className="flex items-center justify-between">
+                    <div>
+                      <p className="text-navy text-sm font-medium">{t.label}</p>
+                      <p className="text-muted text-xs">{t.desc}</p>
+                    </div>
+                    <button
+                      onClick={() => saveTypes({ ...types, [t.id]: !on })}
+                      aria-pressed={on}
+                      className={`relative w-11 h-6 rounded-full transition-colors ${on ? 'bg-gold' : 'bg-navy/15'}`}
+                    >
+                      <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-soft transition-transform ${on ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                    </button>
+                  </div>
+                )
+              })}
+              <p className="text-[11px] text-muted/80 italic pt-2">
+                Note: real "ping you when the app is closed" delivery requires server-side wiring (VAPID + cron). Right now you'll see notifications fire when DealFlow is open.
+              </p>
+            </div>
+          )}
+        </>
+      )}
     </div>
   )
 }

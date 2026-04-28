@@ -13,7 +13,9 @@ import StatCard from '../components/StatCard'
 import PipelineBar from '../components/PipelineBar'
 import LoadingSpinner from '../components/LoadingSpinner'
 import Fab from '../components/Fab'
-import { ArrowRightIcon, BellIcon, FunnelIcon, XIcon } from '../components/Icon'
+import { ArrowRightIcon, BellIcon, FunnelIcon, XIcon, HouseIcon } from '../components/Icon'
+import ShowingCard from '../components/ShowingCard'
+import { runDailyNotificationCheck } from '../lib/pushNotifications'
 
 const SORT_OPTIONS = [
   { id: 'created_desc', label: 'Newest first' },
@@ -50,6 +52,7 @@ export default function Dashboard() {
   const [deals, setDeals] = useState([])
   const [deadlineItems, setDeadlineItems] = useState([])
   const [leads, setLeads] = useState([])
+  const [todaysShowings, setTodaysShowings] = useState([])
   const [profileName, setProfileName] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -73,7 +76,9 @@ export default function Dashboard() {
     try {
       setLoading(true)
 
-      const [profileRes, dealsRes, leadsRes] = await Promise.all([
+      const todayKey = new Date().toISOString().split('T')[0]
+
+      const [profileRes, dealsRes, leadsRes, showingsRes] = await Promise.all([
         supabase.from('profiles').select('full_name').eq('id', user.id).single(),
         supabase
           .from('deals')
@@ -86,12 +91,19 @@ export default function Dashboard() {
           .select('id, temperature, follow_up_date, converted_to_deal_id')
           .eq('user_id', user.id)
           .is('converted_to_deal_id', null),
+        supabase
+          .from('showings')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('showing_date', todayKey)
+          .order('showing_time', { ascending: true, nullsFirst: false }),
       ])
 
       setProfileName(profileRes.data?.full_name || user.user_metadata?.full_name || '')
       if (dealsRes.error) throw dealsRes.error
       setDeals(dealsRes.data || [])
       setLeads(leadsRes.data || [])
+      setTodaysShowings(showingsRes.data || [])
 
       const today = new Date().toISOString().split('T')[0]
       const nextWeek = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0]
@@ -114,6 +126,11 @@ export default function Dashboard() {
   }, [user.id])
 
   useEffect(() => { fetchData() }, [fetchData])
+
+  // Once per session, after data loads, fire any due notifications.
+  useEffect(() => {
+    runDailyNotificationCheck(user.id)
+  }, [user.id])
 
   // Stats
   const buyerCount = deals.filter((d) => d.agent_role === 'buyer').length
@@ -308,6 +325,29 @@ export default function Dashboard() {
 
         {/* ── Leads Pipeline ── */}
         <LeadsPipelineCard leads={leads} onClick={() => navigate('/leads')} />
+
+        {/* ── Today's Showings ── */}
+        {todaysShowings.length > 0 && (
+          <section className="mt-6">
+            <div className="flex items-center gap-2 mb-3">
+              <HouseIcon className="w-4 h-4 text-cyan-700" />
+              <h2 className="font-display text-xl font-bold text-navy">
+                Today's {todaysShowings.length === 1 ? 'Showing' : 'Showings'}
+              </h2>
+              <span className="text-xs text-muted">· {todaysShowings.length}</span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {todaysShowings.map((s) => (
+                <ShowingCard
+                  key={s.id}
+                  showing={s}
+                  compact
+                  onUpdate={(u) => setTodaysShowings((prev) => prev.map((x) => x.id === u.id ? u : x))}
+                />
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* ── Active Transactions ── */}
         <div ref={transactionsRef} id="active-transactions" className="mt-6 scroll-mt-24">

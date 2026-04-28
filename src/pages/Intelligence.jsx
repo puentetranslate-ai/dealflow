@@ -12,11 +12,13 @@ import TopBar from '../components/TopBar'
 import MobileHeader from '../components/MobileHeader'
 import LoadingSpinner from '../components/LoadingSpinner'
 import CommissionTracker from './CommissionTracker'
+import MarketTab from '../components/MarketTab'
 import { ArrowRightIcon, BarChartIcon, CopyIcon, CheckIcon, UserPlusIcon } from '../components/Icon'
 
 const TABS = [
   { id: 'commission', label: 'Commission' },
   { id: 'insights', label: 'Insights' },
+  { id: 'market', label: 'Market' },
 ]
 
 const PERIODS = [
@@ -61,6 +63,7 @@ export default function Intelligence() {
 
       {tab === 'commission' && <CommissionTracker />}
       {tab === 'insights' && <InsightsTab />}
+      {tab === 'market' && <MarketTab />}
     </AppLayout>
   )
 }

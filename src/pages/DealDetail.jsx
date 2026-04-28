@@ -11,9 +11,12 @@ import MobileHeader from '../components/MobileHeader'
 import PhaseBadge from '../components/PhaseBadge'
 import LoadingSpinner from '../components/LoadingSpinner'
 import PortalTab from '../components/PortalTab'
+import ShowingForm from '../components/ShowingForm'
+import ShowingCard from '../components/ShowingCard'
+import DocumentsTab from '../components/DocumentsTab'
 import {
   ArrowLeftIcon, ShareIcon, PhoneIcon, MailIcon, MessageIcon, UsersIcon, CheckIcon,
-  CalendarIcon, PhaseDotIcons, ArrowRightIcon,
+  CalendarIcon, PhaseDotIcons, ArrowRightIcon, HouseIcon, FileIcon,
 } from '../components/Icon'
 
 const TABS = [
@@ -21,6 +24,7 @@ const TABS = [
   { id: 'checklist', label: 'Checklist' },
   { id: 'log', label: 'Communication' },
   { id: 'portal', label: 'Portal' },
+  { id: 'documents', label: 'Documents' },
 ]
 
 export default function DealDetail() {
@@ -350,6 +354,10 @@ export default function DealDetail() {
           {tab === 'portal' && (
             <PortalTab deal={deal} onUnreadChange={setPortalUnreadCount} />
           )}
+
+          {tab === 'documents' && (
+            <DocumentsTab deal={deal} />
+          )}
         </div>
 
         {/* ── Right rail (desktop only) ── */}
@@ -465,6 +473,9 @@ function OverviewTab({ deal, commission, closingDays, nextDeadline }) {
         email={deal.seller_email}
       />
 
+      {/* Showings */}
+      <ShowingsBlock deal={deal} />
+
       {/* Notes */}
       {deal.notes && (
         <div className="card p-5">
@@ -473,6 +484,68 @@ function OverviewTab({ deal, commission, closingDays, nextDeadline }) {
         </div>
       )}
     </>
+  )
+}
+
+// Shows scheduled/completed showings for this deal + a Schedule button.
+function ShowingsBlock({ deal }) {
+  const [showings, setShowings] = useState([])
+  const [open, setOpen] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const { user } = useAuth()
+
+  const fetchShowings = async () => {
+    const { data } = await supabase
+      .from('showings')
+      .select('*')
+      .eq('deal_id', deal.id)
+      .eq('user_id', user.id)
+      .order('showing_date', { ascending: false })
+    setShowings(data || [])
+    setLoading(false)
+  }
+
+  useEffect(() => { fetchShowings() }, [deal.id])
+
+  return (
+    <div className="card p-5">
+      <div className="flex items-center justify-between mb-3">
+        <p className="section-title mb-0">Showings</p>
+        <button
+          onClick={() => setOpen(true)}
+          className="text-xs font-bold uppercase tracking-wider text-gold-dark hover:text-gold transition-colors flex items-center gap-1"
+        >
+          <HouseIcon className="w-3.5 h-3.5" />
+          Schedule
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-3"><LoadingSpinner size="sm" /></div>
+      ) : showings.length === 0 ? (
+        <p className="text-muted text-xs">No showings scheduled yet.</p>
+      ) : (
+        <div className="space-y-3">
+          {showings.map((s) => (
+            <ShowingCard
+              key={s.id}
+              showing={s}
+              compact
+              onUpdate={(updated) =>
+                setShowings((prev) => prev.map((x) => x.id === updated.id ? updated : x))
+              }
+            />
+          ))}
+        </div>
+      )}
+
+      <ShowingForm
+        open={open}
+        onClose={() => setOpen(false)}
+        deal={deal}
+        onSaved={(s) => setShowings((prev) => [s, ...prev])}
+      />
+    </div>
   )
 }
 

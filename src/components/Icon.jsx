@@ -191,6 +191,47 @@ export const FlameIcon = (p) => (
   </svg>
 )
 
+export const BoltIcon = (p) => (
+  <svg viewBox="0 0 24 24" {...stroke} {...p}>
+    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+  </svg>
+)
+
+export const CameraIcon = (p) => (
+  <svg viewBox="0 0 24 24" {...stroke} {...p}>
+    <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
+    <circle cx="12" cy="13" r="4" />
+  </svg>
+)
+
+export const FileIcon = (p) => (
+  <svg viewBox="0 0 24 24" {...stroke} {...p}>
+    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+    <polyline points="14 2 14 8 20 8" />
+  </svg>
+)
+
+export const HouseIcon = (p) => (
+  <svg viewBox="0 0 24 24" {...stroke} {...p}>
+    <path d="M3 12l9-9 9 9" />
+    <path d="M5 10v10a1 1 0 001 1h12a1 1 0 001-1V10" />
+  </svg>
+)
+
+export const TrendUpIcon = (p) => (
+  <svg viewBox="0 0 24 24" {...stroke} {...p}>
+    <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+    <polyline points="17 6 23 6 23 12" />
+  </svg>
+)
+
+export const TrendDownIcon = (p) => (
+  <svg viewBox="0 0 24 24" {...stroke} {...p}>
+    <polyline points="23 18 13.5 8.5 8.5 13.5 1 6" />
+    <polyline points="17 18 23 18 23 12" />
+  </svg>
+)
+
 export const BarChartIcon = (p) => (
   <svg viewBox="0 0 24 24" {...stroke} {...p}>
     <line x1="18" y1="20" x2="18" y2="10" />

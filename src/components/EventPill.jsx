@@ -8,6 +8,7 @@ export const EVENT_STYLES = {
   overdue:        { bg: 'bg-red-100',    text: 'text-red-700',    dot: 'bg-red-500',    label: 'Overdue' },
   'lead-followup':{ bg: 'bg-purple-100', text: 'text-purple-700', dot: 'bg-purple-500', label: 'Follow-up' },
   'client-task':  { bg: 'bg-amber-100',  text: 'text-amber-700',  dot: 'bg-amber-500',  label: 'Task' },
+  showing:        { bg: 'bg-cyan-100',   text: 'text-cyan-700',   dot: 'bg-cyan-500',   label: 'Showing' },
 }
 
 export default function EventPill({ event, onClick, compact = false }) {

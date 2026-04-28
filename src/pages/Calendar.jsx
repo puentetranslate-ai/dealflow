@@ -13,8 +13,9 @@ import LoadingSpinner from '../components/LoadingSpinner'
 import CalendarGrid, { WeeklyGrid } from '../components/CalendarGrid'
 import EventPill, { EVENT_STYLES } from '../components/EventPill'
 import EventDetailSheet from '../components/EventDetailSheet'
+import ShowingForm from '../components/ShowingForm'
 import {
-  ArrowLeftIcon, ArrowRightIcon, PlusIcon, CalendarIcon,
+  ArrowLeftIcon, ArrowRightIcon, PlusIcon, CalendarIcon, HouseIcon, FunnelIcon, HomeIcon, XIcon,
 } from '../components/Icon'
 
 // Pulls events from 5 sources and renders a unified calendar:
@@ -34,6 +35,8 @@ export default function Calendar() {
   const [loading, setLoading] = useState(true)
   const [selectedDate, setSelectedDate] = useState(today)
   const [activeEvent, setActiveEvent] = useState(null)
+  const [addMenuOpen, setAddMenuOpen] = useState(false)
+  const [showingFormOpen, setShowingFormOpen] = useState(false)
 
   // Single fetch on mount — all events for this user. Date-bucketing happens
   // client-side, so navigation between months/weeks is free.
@@ -61,7 +64,12 @@ export default function Calendar() {
         .eq('user_id', user.id)
         .eq('is_completed', false)
         .not('due_date', 'is', null),
-    ]).then(([dealsRes, checklistRes, leadsRes, tasksRes]) => {
+      supabase
+        .from('showings')
+        .select('id, deal_id, property_address, showing_date, showing_time, status, client_name')
+        .eq('user_id', user.id)
+        .neq('status', 'cancelled'),
+    ]).then(([dealsRes, checklistRes, leadsRes, tasksRes, showingsRes]) => {
       if (cancelled) return
       const out = []
 
@@ -122,6 +130,17 @@ export default function Calendar() {
         })
       })
 
+      ;(showingsRes.data || []).forEach((s) => {
+        out.push({
+          id: `showing-${s.id}`,
+          type: 'showing',
+          title: `Showing: ${shortAddress(s.property_address)}`,
+          subtitle: s.client_name ? `For ${s.client_name}` : 'Property showing',
+          date: s.showing_date,
+          link: s.deal_id ? `/deals/${s.deal_id}` : null,
+        })
+      })
+
       setEvents(out)
       setLoading(false)
     })
@@ -136,7 +155,7 @@ export default function Calendar() {
       map[e.date].push(e)
     })
     // Sort within each day: overdue first, then by type
-    const order = ['overdue', 'closing', 'offer', 'lead-followup', 'checklist', 'client-task']
+    const order = ['overdue', 'showing', 'closing', 'offer', 'lead-followup', 'checklist', 'client-task']
     Object.values(map).forEach((arr) => arr.sort((a, b) =>
       order.indexOf(a.type) - order.indexOf(b.type)
     ))
@@ -205,13 +224,40 @@ export default function Calendar() {
                 <ToggleTab active={view === 'monthly'} onClick={() => setView('monthly')}>Month</ToggleTab>
                 <ToggleTab active={view === 'weekly'} onClick={() => setView('weekly')}>Week</ToggleTab>
               </div>
-              <button
-                onClick={() => navigate('/deals/new')}
-                className="hidden md:flex items-center gap-1.5 bg-navy hover:bg-navy-light text-white text-sm font-semibold rounded-xl px-4 h-10 transition-colors"
-              >
-                <PlusIcon className="w-4 h-4" />
-                Add
-              </button>
+              <div className="relative">
+                <button
+                  onClick={() => setAddMenuOpen((v) => !v)}
+                  className="flex items-center gap-1.5 bg-navy hover:bg-navy-light text-white text-sm font-semibold rounded-xl px-4 h-10 transition-colors"
+                >
+                  <PlusIcon className="w-4 h-4" />
+                  Add
+                </button>
+                {addMenuOpen && (
+                  <>
+                    <div
+                      onClick={() => setAddMenuOpen(false)}
+                      className="fixed inset-0 z-30"
+                    />
+                    <div className="absolute right-0 top-12 z-40 w-56 bg-white rounded-2xl shadow-pop border border-navy/[0.06] py-1.5 animate-fade-in">
+                      <AddMenuItem
+                        icon={<HomeIcon className="w-4 h-4" />}
+                        label="New Deal"
+                        onClick={() => { setAddMenuOpen(false); navigate('/deals/new') }}
+                      />
+                      <AddMenuItem
+                        icon={<HouseIcon className="w-4 h-4" />}
+                        label="Schedule Showing"
+                        onClick={() => { setAddMenuOpen(false); setShowingFormOpen(true) }}
+                      />
+                      <AddMenuItem
+                        icon={<FunnelIcon className="w-4 h-4" />}
+                        label="Add Lead"
+                        onClick={() => { setAddMenuOpen(false); navigate('/leads/new') }}
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </div>
 
@@ -286,7 +332,40 @@ export default function Calendar() {
       </div>
 
       <EventDetailSheet event={activeEvent} onClose={() => setActiveEvent(null)} />
+
+      <ShowingForm
+        open={showingFormOpen}
+        onClose={() => setShowingFormOpen(false)}
+        allowDealPicker
+        onSaved={(s) => {
+          setEvents((prev) => [
+            ...prev,
+            {
+              id: `showing-${s.id}`,
+              type: 'showing',
+              title: `Showing: ${shortAddress(s.property_address)}`,
+              subtitle: s.client_name ? `For ${s.client_name}` : 'Property showing',
+              date: s.showing_date,
+              link: s.deal_id ? `/deals/${s.deal_id}` : null,
+            },
+          ])
+        }}
+      />
     </AppLayout>
+  )
+}
+
+function AddMenuItem({ icon, label, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-navy hover:bg-cream/60 transition-colors text-left"
+    >
+      <span className="w-7 h-7 rounded-lg bg-gold/15 text-gold-dark flex items-center justify-center shrink-0">
+        {icon}
+      </span>
+      {label}
+    </button>
   )
 }
 

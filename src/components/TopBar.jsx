@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { SearchIcon, PlusIcon, BellIcon } from './Icon'
+import { QuickLogButton } from './QuickLogTrigger'
 
 export default function TopBar({ search, onSearchChange, searchPlaceholder = 'Search deals, clients, addresses…' }) {
   const navigate = useNavigate()
@@ -24,6 +25,7 @@ export default function TopBar({ search, onSearchChange, searchPlaceholder = 'Se
         >
           <BellIcon className="w-5 h-5" />
         </button>
+        <QuickLogButton />
         <button
           onClick={() => navigate('/deals/new')}
           className="bg-navy text-white hover:bg-navy-light font-semibold text-sm rounded-xl pl-4 pr-5 h-10 flex items-center gap-2 transition-colors"

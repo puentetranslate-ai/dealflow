@@ -302,3 +302,96 @@ CREATE POLICY "Public can read checklist items for active portal" ON public.chec
       WHERE cp.deal_id = checklist_items.deal_id AND cp.is_active = true
     )
   );
+
+
+-- ── Showings ───────────────────────────────────────────────
+-- Property showings the agent has scheduled. Optionally linked to a deal.
+CREATE TABLE IF NOT EXISTS public.showings (
+  id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id             uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  deal_id             uuid REFERENCES public.deals(id) ON DELETE SET NULL,
+  property_address    text NOT NULL,
+  showing_date        date NOT NULL,
+  showing_time        time,
+  client_name         text,
+  notes               text,
+  status              text NOT NULL DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'completed', 'cancelled')),
+  post_showing_notes  text,
+  created_at          timestamptz DEFAULT now()
+);
+
+ALTER TABLE public.showings ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can manage own showings" ON public.showings
+  FOR ALL USING (auth.uid() = user_id);
+
+CREATE INDEX IF NOT EXISTS showings_user_id_idx ON public.showings (user_id);
+CREATE INDEX IF NOT EXISTS showings_date_idx ON public.showings (showing_date);
+CREATE INDEX IF NOT EXISTS showings_deal_id_idx ON public.showings (deal_id);
+
+
+-- ── Documents ──────────────────────────────────────────────
+-- Metadata only — actual files live in the "deal-documents" Storage bucket.
+CREATE TABLE IF NOT EXISTS public.documents (
+  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id       uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  deal_id       uuid NOT NULL REFERENCES public.deals(id) ON DELETE CASCADE,
+  file_name     text NOT NULL,
+  file_type     text NOT NULL,
+  file_size     integer,
+  storage_path  text NOT NULL,
+  public_url    text,
+  uploaded_at   timestamptz DEFAULT now()
+);
+
+ALTER TABLE public.documents ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can manage own documents" ON public.documents
+  FOR ALL USING (auth.uid() = user_id);
+
+CREATE INDEX IF NOT EXISTS documents_deal_id_idx ON public.documents (deal_id);
+CREATE INDEX IF NOT EXISTS documents_user_id_idx ON public.documents (user_id);
+
+
+-- ── Storage policies for the deal-documents bucket ─────────
+-- Run AFTER creating the "deal-documents" bucket in Supabase Storage.
+-- Files live at:  {user_id}/{deal_id}/{filename}
+-- The first folder segment must equal auth.uid() — that's how RLS gates
+-- per-user access without the agent ever seeing another agent's files.
+CREATE POLICY "Users can upload to own folder"
+  ON storage.objects FOR INSERT
+  WITH CHECK (
+    bucket_id = 'deal-documents'
+    AND auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+CREATE POLICY "Users can read own files"
+  ON storage.objects FOR SELECT
+  USING (
+    bucket_id = 'deal-documents'
+    AND auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+CREATE POLICY "Users can delete own files"
+  ON storage.objects FOR DELETE
+  USING (
+    bucket_id = 'deal-documents'
+    AND auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+
+-- ── Push Subscriptions ─────────────────────────────────────
+-- Stores the browser's push subscription object for each user. A backend
+-- (Vercel cron, Supabase Edge Function, etc.) reads these to actually
+-- fire push messages — this app only writes them.
+CREATE TABLE IF NOT EXISTS public.push_subscriptions (
+  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id       uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE,
+  subscription  jsonb NOT NULL,
+  created_at    timestamptz DEFAULT now()
+);
+
+ALTER TABLE public.push_subscriptions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can manage own push subscriptions" ON public.push_subscriptions
+  FOR ALL USING (auth.uid() = user_id);
