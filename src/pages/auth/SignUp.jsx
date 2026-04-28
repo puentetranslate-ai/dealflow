@@ -30,11 +30,25 @@ export default function SignUp() {
       return
     }
     setLoading(true)
-    const { error } = await signUp(email, password, fullName)
+    const { data, error } = await signUp(email, password, fullName)
     if (error) {
       setError(error.message)
       setLoading(false)
     } else {
+      // Fire-and-forget welcome email. Never blocks signup; failures are
+      // swallowed silently so a Resend hiccup can't keep an agent stuck on
+      // this screen.
+      const firstName = (fullName || '').trim().split(/\s+/)[0] || ''
+      fetch('/api/send-welcome-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          firstName,
+          userId: data?.user?.id || null,
+        }),
+      }).catch(() => {})
+
       setSuccess(true)
       setLoading(false)
     }

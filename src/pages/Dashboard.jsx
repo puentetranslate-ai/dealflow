@@ -15,6 +15,7 @@ import LoadingSpinner from '../components/LoadingSpinner'
 import Fab from '../components/Fab'
 import { ArrowRightIcon, BellIcon, FunnelIcon, XIcon, HouseIcon } from '../components/Icon'
 import ShowingCard from '../components/ShowingCard'
+import WelcomeModal from '../components/WelcomeModal'
 import { runDailyNotificationCheck } from '../lib/pushNotifications'
 
 const SORT_OPTIONS = [
@@ -210,6 +211,8 @@ export default function Dashboard() {
 
   return (
     <AppLayout>
+      <WelcomeModal userId={user.id} firstName={firstName} />
+
       {/* ── Mobile Header ── */}
       <MobileHeader showBell title={null}>
         <p className="text-gold text-xs font-semibold uppercase tracking-[0.14em]">
