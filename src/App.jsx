@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import Landing from './pages/Landing'
+import ClientPortal from './pages/ClientPortal'
 import Login from './pages/auth/Login'
 import SignUp from './pages/auth/SignUp'
 import ForgotPassword from './pages/auth/ForgotPassword'
@@ -26,6 +27,9 @@ export default function App() {
           <Route path="/signup" element={<SignUp />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+
+          {/* Public client portal — no auth, gated by RLS via the token */}
+          <Route path="/portal/:token" element={<ClientPortal />} />
 
           {/* Protected app routes — redirect to /login if not authenticated */}
           <Route element={<ProtectedRoute />}>

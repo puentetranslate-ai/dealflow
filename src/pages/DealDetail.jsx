@@ -10,6 +10,7 @@ import AppLayout from '../components/AppLayout'
 import MobileHeader from '../components/MobileHeader'
 import PhaseBadge from '../components/PhaseBadge'
 import LoadingSpinner from '../components/LoadingSpinner'
+import PortalTab from '../components/PortalTab'
 import {
   ArrowLeftIcon, ShareIcon, PhoneIcon, MailIcon, MessageIcon, UsersIcon, CheckIcon,
   CalendarIcon, PhaseDotIcons, ArrowRightIcon,
@@ -19,6 +20,7 @@ const TABS = [
   { id: 'overview', label: 'Overview' },
   { id: 'checklist', label: 'Checklist' },
   { id: 'log', label: 'Communication' },
+  { id: 'portal', label: 'Portal' },
 ]
 
 export default function DealDetail() {
@@ -46,7 +48,29 @@ export default function DealDetail() {
   const [logSaving, setLogSaving] = useState(false)
   const [logError, setLogError] = useState(null)
 
+  // Portal unread badge — counts client task completions newer than last
+  // time the agent opened the Portal tab. Stored per-deal in localStorage.
+  const [portalUnreadCount, setPortalUnreadCount] = useState(0)
+
   useEffect(() => { fetchDeal() }, [id])
+
+  useEffect(() => {
+    if (!id) return
+    const lastViewed = localStorage.getItem(`portal-viewed:${id}`)
+    const sinceIso = lastViewed || '1970-01-01T00:00:00Z'
+    let cancelled = false
+    supabase
+      .from('client_tasks')
+      .select('id', { count: 'exact', head: true })
+      .eq('deal_id', id)
+      .eq('user_id', user.id)
+      .eq('is_completed', true)
+      .gt('completed_at', sinceIso)
+      .then(({ count }) => {
+        if (!cancelled && typeof count === 'number') setPortalUnreadCount(count)
+      })
+    return () => { cancelled = true }
+  }, [id, user.id])
   useEffect(() => {
     if (tab === 'checklist' && !checklistLoaded) fetchChecklist()
     if (tab === 'log' && !logLoaded) fetchLog()
@@ -212,11 +236,14 @@ export default function DealDetail() {
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-colors ${
+              className={`relative flex-1 py-2 text-xs font-semibold rounded-lg transition-colors ${
                 tab === t.id ? 'bg-white text-navy' : 'text-white/60'
               }`}
             >
               {t.label}
+              {t.id === 'portal' && portalUnreadCount > 0 && (
+                <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-gold" />
+              )}
             </button>
           ))}
         </div>
@@ -264,11 +291,16 @@ export default function DealDetail() {
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`relative px-4 py-3 text-sm font-semibold transition-colors ${
+            className={`relative px-4 py-3 text-sm font-semibold transition-colors flex items-center gap-2 ${
               tab === t.id ? 'text-navy' : 'text-muted hover:text-navy'
             }`}
           >
             {t.label}
+            {t.id === 'portal' && portalUnreadCount > 0 && (
+              <span className="bg-gold text-navy text-[10px] font-bold rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center">
+                {portalUnreadCount}
+              </span>
+            )}
             {tab === t.id && (
               <span className="absolute bottom-0 left-3 right-3 h-0.5 bg-gold rounded-full" />
             )}
@@ -313,6 +345,10 @@ export default function DealDetail() {
               onSave={saveLogEntry}
               defaultContacts={[deal.buyer_name, deal.seller_name].filter(Boolean)}
             />
+          )}
+
+          {tab === 'portal' && (
+            <PortalTab deal={deal} onUnreadChange={setPortalUnreadCount} />
           )}
         </div>
 

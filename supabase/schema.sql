@@ -202,3 +202,103 @@ CREATE INDEX IF NOT EXISTS leads_user_id_idx ON public.leads (user_id);
 CREATE INDEX IF NOT EXISTS leads_temperature_idx ON public.leads (temperature);
 CREATE INDEX IF NOT EXISTS leads_follow_up_date_idx ON public.leads (follow_up_date) WHERE follow_up_date IS NOT NULL;
 CREATE INDEX IF NOT EXISTS leads_converted_idx ON public.leads (converted_to_deal_id) WHERE converted_to_deal_id IS NOT NULL;
+
+
+-- ── Client Portals ─────────────────────────────────────────
+-- Each row mints a unique token used as the public URL fragment
+-- (/portal/:token). Anyone with the token can render the portal,
+-- but only while is_active = true.
+--
+-- Agent contact info is denormalized onto each portal row so the
+-- public portal can display name/phone/email without exposing
+-- auth.users or profiles to the anon key.
+CREATE TABLE IF NOT EXISTS public.client_portals (
+  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  deal_id       uuid NOT NULL REFERENCES public.deals(id) ON DELETE CASCADE,
+  user_id       uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  token         text NOT NULL UNIQUE DEFAULT encode(gen_random_bytes(32), 'hex'),
+  client_name   text,
+  client_type   text NOT NULL DEFAULT 'buyer' CHECK (client_type IN ('buyer', 'seller')),
+  is_active     boolean NOT NULL DEFAULT true,
+  agent_name    text,
+  agent_email   text,
+  agent_phone   text,
+  created_at    timestamptz DEFAULT now()
+);
+
+ALTER TABLE public.client_portals ENABLE ROW LEVEL SECURITY;
+
+-- Agent has full control over their own portals
+CREATE POLICY "Agents can manage own portals" ON public.client_portals
+  FOR ALL USING (auth.uid() = user_id);
+
+-- Public read for active portals (the client opens the portal URL)
+CREATE POLICY "Public can read active portals" ON public.client_portals
+  FOR SELECT USING (is_active = true);
+
+CREATE INDEX IF NOT EXISTS client_portals_deal_id_idx ON public.client_portals (deal_id);
+CREATE INDEX IF NOT EXISTS client_portals_token_idx ON public.client_portals (token);
+
+
+-- ── Client Tasks ───────────────────────────────────────────
+-- Tasks the agent assigns to a portal. Public can read and update
+-- (mark complete) while the parent portal is active.
+CREATE TABLE IF NOT EXISTS public.client_tasks (
+  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  deal_id       uuid NOT NULL REFERENCES public.deals(id) ON DELETE CASCADE,
+  portal_id     uuid NOT NULL REFERENCES public.client_portals(id) ON DELETE CASCADE,
+  user_id       uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  title         text NOT NULL,
+  description   text,
+  due_date      date,
+  is_completed  boolean NOT NULL DEFAULT false,
+  completed_at  timestamptz,
+  sort_order    integer NOT NULL DEFAULT 0,
+  created_at    timestamptz DEFAULT now()
+);
+
+ALTER TABLE public.client_tasks ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Agents can manage own client tasks" ON public.client_tasks
+  FOR ALL USING (auth.uid() = user_id);
+
+CREATE POLICY "Public can read tasks for active portal" ON public.client_tasks
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM public.client_portals cp
+      WHERE cp.id = portal_id AND cp.is_active = true
+    )
+  );
+
+CREATE POLICY "Public can complete tasks for active portal" ON public.client_tasks
+  FOR UPDATE USING (
+    EXISTS (
+      SELECT 1 FROM public.client_portals cp
+      WHERE cp.id = portal_id AND cp.is_active = true
+    )
+  );
+
+CREATE INDEX IF NOT EXISTS client_tasks_portal_id_idx ON public.client_tasks (portal_id);
+CREATE INDEX IF NOT EXISTS client_tasks_deal_id_idx ON public.client_tasks (deal_id);
+
+
+-- ── Public read extensions for deals + checklist_items ─────
+-- Required so the public portal page can render the deal record
+-- (address, phase, closing date) and the agent's checklist items
+-- for "What's coming next". Gated by the existence of an active
+-- portal for the same deal.
+CREATE POLICY "Public can read deal for active portal" ON public.deals
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM public.client_portals cp
+      WHERE cp.deal_id = deals.id AND cp.is_active = true
+    )
+  );
+
+CREATE POLICY "Public can read checklist items for active portal" ON public.checklist_items
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM public.client_portals cp
+      WHERE cp.deal_id = checklist_items.deal_id AND cp.is_active = true
+    )
+  );
