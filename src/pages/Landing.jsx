@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 
-const STRIPE_URL = 'https://buy.stripe.com/cNi14oetl2c75f19853F601'
+const STRIPE_URL = 'https://buy.stripe.com/cNiaEYgBtaIDePBac93F602'
 
 const PROBLEMS = [
   {
@@ -82,7 +82,7 @@ const PRICING = [
     id: 'core',
     name: 'Core',
     price: 15,
-    setup: 100,
+    setup: 30,
     badge: 'Most Popular',
     available: true,
     features: [
@@ -101,7 +101,7 @@ const PRICING = [
     id: 'pro',
     name: 'Pro',
     price: 20,
-    setup: 100,
+    setup: 30,
     available: false,
     features: [
       'Everything in Core, plus:',
@@ -115,7 +115,7 @@ const PRICING = [
     id: 'pro-plus',
     name: 'Pro+',
     price: 25,
-    setup: 100,
+    setup: 30,
     available: false,
     features: [
       'Everything in Pro, plus:',
@@ -580,7 +580,7 @@ function PricingCard({ tier }) {
         <span className={`text-sm ${isHero ? 'text-white/60' : 'text-muted'}`}>/month</span>
       </div>
       <p className={`text-xs mt-1 ${isHero ? 'text-white/60' : 'text-muted'}`}>
-        ${tier.setup} one-time setup fee
+        ${tier.setup} one-time onboarding fee
       </p>
 
       <ul className={`mt-6 space-y-2.5 text-sm ${isHero ? 'text-white/90' : 'text-navy'}`}>
@@ -684,7 +684,7 @@ function FinalCTA() {
           Start Free Trial
         </a>
         <p className="text-white/50 text-xs mt-4">
-          30-day free trial · $100 setup + $15/month after · Cancel anytime
+          30-day free trial · $30 onboarding + $15/month after · Cancel anytime
         </p>
       </div>
     </section>
