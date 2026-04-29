@@ -540,7 +540,7 @@ function Pricing() {
           Simple, transparent pricing.
         </h2>
         <p className="text-muted text-center text-base md:text-lg mt-3">
-          Start free for 30 days. Cancel anytime. No setup fees.
+          Start free for 30 days. Cancel anytime. No hidden fees.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mt-12">
@@ -604,7 +604,7 @@ function PricingCard({ tier }) {
               {tier.cta}
             </a>
             <p className={`text-center text-xs mt-3 ${isHero ? 'text-white/60' : 'text-muted'}`}>
-              Beta testers — enter your code at checkout for $0 setup fee.
+              Beta testers — enter your code at checkout for $0 onboarding fee.
             </p>
           </>
         ) : (
