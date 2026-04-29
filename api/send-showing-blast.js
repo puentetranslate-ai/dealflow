@@ -6,18 +6,12 @@
 // and so a single bad address doesn't poison the whole batch.
 //
 // Required env vars (set in Vercel project settings, NOT in client .env):
-//   RESEND_API_KEY — your Resend API key
-//
-// From address is hardcoded to Resend's onboarding sandbox while
-// dealflownow.net domain verification is pending. NOTE: Resend's
-// onboarding domain only delivers to the email registered on the
-// Resend account — recipients other than that address return 403.
-// Swap this back to a dealflownow.net sender once the custom domain
-// is verified.
+//   RESEND_API_KEY      — your Resend API key
+//   RESEND_FROM_EMAIL   — optional, defaults to DealFlow <noreply@dealflownow.net>
 
 const RESEND_URL = 'https://api.resend.com/emails'
 const MAX_RECIPIENTS = 50
-const FROM = 'DealFlow <onboarding@resend.dev>'
+const DEFAULT_FROM = 'DealFlow <noreply@dealflownow.net>'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -31,7 +25,7 @@ export default async function handler(req, res) {
       error: 'Email service not configured. Add RESEND_API_KEY in Vercel.',
     })
   }
-  const from = FROM
+  const from = process.env.RESEND_FROM_EMAIL || DEFAULT_FROM
 
   let body
   try {
