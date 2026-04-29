@@ -27,6 +27,12 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // CRITICAL: do NOT serve the SPA shell (precached index.html) for
+        // /api/* navigation requests. Without this, the auto-registered
+        // NavigationRoute hijacks every request to /api/... and returns the
+        // landing page from cache, so Vercel's serverless functions never
+        // get called from a browser that has visited the site before.
+        navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
