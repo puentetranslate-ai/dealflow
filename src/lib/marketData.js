@@ -1,16 +1,26 @@
-// Fetches free-tier FRED economic series via our Vercel serverless proxy
-// at /api/fred?series={id}. The proxy fetches FRED's public CSV graph
-// endpoint server-side, parses it, and returns JSON — sidestepping CORS.
+// Fetches free-tier FRED economic series through corsproxy.io, a public
+// CORS proxy.
 //
-// The proxy always responds with JSON of shape { series, data, error? }.
-// Empty data + error field means the upstream fetch failed; we handle
-// that as a graceful "data unavailable" path.
+// We previously tried fetching FRED through our own Vercel serverless
+// function (api/fred.js — kept in repo as a fallback). That function
+// boots and runs, but FRED's edge appears to block (or silently drop)
+// connections from Vercel's IP ranges, returning "fetch failed". A
+// browser-originated fetch through corsproxy.io works reliably, so the
+// frontend uses that path until we have a server-side workaround.
+//
+// TRADE-OFFS of using corsproxy.io vs. our own function:
+//   - Free third-party service. Reliability is whatever they offer.
+//   - No edge caching control (we cache in localStorage instead).
+//   - Same data passes through their servers; low concern for public FRED
+//     data but worth noting.
 //
 // Caches every series in localStorage for 24 hours. Always returns
 // { series: [{date, value}], stale: false } or { error } — never throws.
 
 const CACHE_TTL_HOURS = 24
-const PROXY_URL = '/api/fred'
+const FRED_BASE = 'https://fred.stlouisfed.org/graph/fredgraph.csv'
+const proxyUrl = (id) =>
+  `https://corsproxy.io/?url=${encodeURIComponent(`${FRED_BASE}?id=${id}`)}`
 
 const SERIES = {
   mortgage30: 'MORTGAGE30US',     // 30-year fixed mortgage rate (weekly)
@@ -58,9 +68,24 @@ function writeCache(id, series) {
 
 // Hard ceiling on how long we wait for the proxy. Without a timeout, a
 // hanging fetch leaves the Promise pending forever and the Market tab
-// spinner never resolves. The proxy itself uses a 20s upstream timeout,
-// so 25s here gives the proxy room to time out gracefully first.
-const FETCH_TIMEOUT_MS = 25000
+// spinner never resolves.
+const FETCH_TIMEOUT_MS = 12000
+
+// Parse FRED CSV: "DATE,SERIES_ID\n2024-01-04,6.62\n..."
+// Skip header row + any rows where value is missing (FRED uses '.').
+function parseCsv(text) {
+  const lines = text.split(/\r?\n/).filter(Boolean)
+  if (lines.length < 2) return []
+  const out = []
+  for (let i = 1; i < lines.length; i++) {
+    const [date, valueRaw] = lines[i].split(',')
+    if (!date) continue
+    const value = parseFloat(valueRaw)
+    if (Number.isNaN(value)) continue
+    out.push({ date, value })
+  }
+  return out
+}
 
 async function fetchSeries(id) {
   const cached = readCache(id)
@@ -75,21 +100,11 @@ async function fetchSeries(id) {
     : null
 
   try {
-    const res = await fetch(`${PROXY_URL}?series=${encodeURIComponent(id)}`, {
-      signal: controller?.signal,
-    })
+    const res = await fetch(proxyUrl(id), { signal: controller?.signal })
     if (timeoutId) clearTimeout(timeoutId)
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    const json = await res.json()
-
-    // Proxy responds with { series, data, error? } regardless of upstream
-    // health. An error field with empty data means upstream failed — treat
-    // that as a graceful failure, not a crash.
-    if (json.error && (!json.data || json.data.length === 0)) {
-      throw new Error(json.error)
-    }
-
-    const series = json.data || []
+    const text = await res.text()
+    const series = parseCsv(text)
     if (series.length === 0) throw new Error('Empty series')
     writeCache(id, series)
     return { series, fromCache: false, error: null }
