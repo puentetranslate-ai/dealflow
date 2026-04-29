@@ -1,12 +1,21 @@
-// Fetches free-tier FRED economic series via our Vercel serverless proxy
-// at /api/fred?series={id}. The proxy fetches FRED's public CSV graph
-// endpoint server-side, parses it, and returns JSON — sidestepping CORS.
+// Fetches free-tier FRED economic series through corsproxy.io, a public
+// CORS proxy. We tried our own Vercel serverless function at /api/fred
+// but functions aren't being detected/deployed in this Vite project's
+// build — left in api/fred.js for when that's fixed.
+//
+// TRADE-OFFS of using corsproxy.io vs. our own function:
+//   - It's a free third-party service. Reliability is whatever they offer.
+//   - No edge caching control (we cache in localStorage instead).
+//   - Same data passes through their servers; low concern for public FRED
+//     data but worth noting.
 //
 // Caches every series in localStorage for 24 hours. Always returns
 // { series: [{date, value}], stale: false } or { error } — never throws.
 
 const CACHE_TTL_HOURS = 24
-const PROXY_URL = '/api/fred'
+const FRED_BASE = 'https://fred.stlouisfed.org/graph/fredgraph.csv'
+const proxyUrl = (id) =>
+  `https://corsproxy.io/?url=${encodeURIComponent(`${FRED_BASE}?id=${id}`)}`
 
 const SERIES = {
   mortgage30: 'MORTGAGE30US',     // 30-year fixed mortgage rate (weekly)
@@ -54,8 +63,24 @@ function writeCache(id, series) {
 
 // Hard ceiling on how long we wait for the proxy. Without a timeout, a
 // hanging fetch leaves the Promise pending forever and the Market tab
-// spinner never resolves. 12s is generous for a server-side CSV fetch.
+// spinner never resolves. 12s is generous.
 const FETCH_TIMEOUT_MS = 12000
+
+// Parse FRED CSV: "DATE,SERIES_ID\n2024-01-04,6.62\n..."
+// Skip header row + any rows where value is missing (FRED uses '.').
+function parseCsv(text) {
+  const lines = text.split(/\r?\n/).filter(Boolean)
+  if (lines.length < 2) return []
+  const out = []
+  for (let i = 1; i < lines.length; i++) {
+    const [date, valueRaw] = lines[i].split(',')
+    if (!date) continue
+    const value = parseFloat(valueRaw)
+    if (Number.isNaN(value)) continue
+    out.push({ date, value })
+  }
+  return out
+}
 
 async function fetchSeries(id) {
   const cached = readCache(id)
@@ -70,13 +95,11 @@ async function fetchSeries(id) {
     : null
 
   try {
-    const res = await fetch(`${PROXY_URL}?series=${encodeURIComponent(id)}`, {
-      signal: controller?.signal,
-    })
+    const res = await fetch(proxyUrl(id), { signal: controller?.signal })
     if (timeoutId) clearTimeout(timeoutId)
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    const json = await res.json()
-    const series = json.data || []
+    const text = await res.text()
+    const series = parseCsv(text)
     if (series.length === 0) throw new Error('Empty series')
     writeCache(id, series)
     return { series, fromCache: false, error: null }
