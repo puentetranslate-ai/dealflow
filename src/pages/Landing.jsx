@@ -725,7 +725,10 @@ function Footer() {
       </div>
 
       <div className="border-t border-white/[0.06] py-6 text-center text-white/40 text-xs">
-        © 2026 DealFlow. All rights reserved.
+        © 2026 DealFlow. All rights reserved. ·{' '}
+        <a href="/terms" className="text-white/60 hover:text-gold transition-colors">
+          Terms of Service
+        </a>
       </div>
     </footer>
   )

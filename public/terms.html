@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Terms of Service — DealFlow</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --navy: #0c1e35;
+    --gold: #c9a84c;
+    --cream: #f7f3ec;
+    --muted: #8a9ab5;
+    --text: #1a2a3a;
+    --light: #e2d9c8;
+  }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--text); line-height: 1.7; }
+
+  /* NAV */
+  nav {
+    background: var(--navy); padding: 1rem 2rem;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .logo { font-family: 'Playfair Display', serif; font-size: 1.3rem; font-weight: 700; color: white; text-decoration: none; }
+  .logo span { color: var(--gold); }
+  .nav-link { color: var(--muted); font-size: 0.85rem; text-decoration: none; }
+  .nav-link:hover { color: var(--gold); }
+
+  /* HEADER */
+  .page-header {
+    background: var(--navy); padding: 3rem 2rem 2.5rem;
+    text-align: center;
+  }
+  .page-header h1 { font-family: 'Playfair Display', serif; font-size: 2.2rem; color: white; margin-bottom: 0.5rem; }
+  .page-header p { color: var(--muted); font-size: 0.9rem; }
+  .page-header .updated { color: var(--gold); font-size: 0.8rem; margin-top: 0.5rem; font-weight: 500; }
+
+  /* CONTENT */
+  .container { max-width: 860px; margin: 0 auto; padding: 3rem 2rem 5rem; }
+
+  .toc {
+    background: white; border: 1px solid var(--light); border-radius: 8px;
+    padding: 1.5rem 2rem; margin-bottom: 3rem;
+  }
+  .toc h3 { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--navy); margin-bottom: 1rem; }
+  .toc ol { padding-left: 1.2rem; }
+  .toc li { margin-bottom: 0.4rem; }
+  .toc a { color: var(--navy); text-decoration: none; font-size: 0.9rem; }
+  .toc a:hover { color: var(--gold); }
+
+  .section { margin-bottom: 3rem; }
+  .section h2 {
+    font-family: 'Playfair Display', serif; font-size: 1.3rem;
+    color: var(--navy); margin-bottom: 1rem; padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--gold);
+  }
+  .section p { margin-bottom: 1rem; font-size: 0.95rem; color: var(--text); }
+  .section ul, .section ol { padding-left: 1.5rem; margin-bottom: 1rem; }
+  .section li { margin-bottom: 0.4rem; font-size: 0.95rem; }
+
+  .highlight-box {
+    background: white; border-left: 4px solid var(--gold);
+    padding: 1rem 1.5rem; border-radius: 0 8px 8px 0;
+    margin: 1.5rem 0;
+  }
+  .highlight-box p { margin-bottom: 0; font-size: 0.9rem; color: var(--text); }
+  .highlight-box strong { color: var(--navy); }
+
+  .warning-box {
+    background: #fff8e7; border: 1px solid var(--gold);
+    border-radius: 8px; padding: 1rem 1.5rem; margin: 1.5rem 0;
+  }
+  .warning-box p { margin-bottom: 0; font-size: 0.9rem; }
+
+  .caps {
+    font-size: 0.85rem; line-height: 1.6;
+    background: white; border: 1px solid var(--light);
+    border-radius: 8px; padding: 1rem 1.5rem; margin: 1rem 0;
+  }
+
+  /* FOOTER */
+  footer {
+    background: var(--navy); padding: 2rem;
+    text-align: center; color: var(--muted); font-size: 0.8rem;
+  }
+  footer a { color: var(--gold); text-decoration: none; }
+  footer .logo-footer { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: white; margin-bottom: 0.5rem; display: block; }
+  footer .logo-footer span { color: var(--gold); }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="logo">Deal<span>Flow</span></a>
+  <a href="/" class="nav-link">← Back to DealFlow</a>
+</nav>
+
+<div class="page-header">
+  <h1>Terms of Service</h1>
+  <p>Please read these terms carefully before using DealFlow.</p>
+  <div class="updated">Last Updated: April 29, 2026 · Effective: April 29, 2026</div>
+</div>
+
+<div class="container">
+
+  <!-- TABLE OF CONTENTS -->
+  <div class="toc">
+    <h3>Table of Contents</h3>
+    <ol>
+      <li><a href="#acceptance">Acceptance of Terms</a></li>
+      <li><a href="#description">Description of Service</a></li>
+      <li><a href="#accounts">Accounts and Registration</a></li>
+      <li><a href="#subscription">Subscription, Billing, and Cancellation</a></li>
+      <li><a href="#license">License Grant and Restrictions</a></li>
+      <li><a href="#data">Your Data — Ownership and Responsibility</a></li>
+      <li><a href="#documents">Reference Files — Important Disclaimer</a></li>
+      <li><a href="#market">Market Data — Important Disclaimer</a></li>
+      <li><a href="#real-estate">Real Estate Compliance Disclaimer</a></li>
+      <li><a href="#privacy">Privacy and Data Security</a></li>
+      <li><a href="#warranty">Warranty Disclaimer</a></li>
+      <li><a href="#liability">Limitation of Liability</a></li>
+      <li><a href="#indemnification">Indemnification</a></li>
+      <li><a href="#termination">Termination</a></li>
+      <li><a href="#changes">Changes to Service and Terms</a></li>
+      <li><a href="#governing">Governing Law and Dispute Resolution</a></li>
+      <li><a href="#contact">Contact Information</a></li>
+    </ol>
+  </div>
+
+  <!-- SECTION 1 -->
+  <div class="section" id="acceptance">
+    <h2>1. Acceptance of Terms</h2>
+    <p>By accessing or using DealFlow ("Service," "Platform," "App"), operated by Puente Translations LLC ("Company," "we," "us," or "our"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree to these Terms, do not use the Service.</p>
+    <p>These Terms apply to all users of the Service, including free trial users, beta testers, and paid subscribers. Your continued use of the Service following any updates to these Terms constitutes acceptance of the revised Terms.</p>
+    <div class="highlight-box">
+      <p><strong>Age Requirement:</strong> You must be at least 18 years old and legally able to enter into contracts in your jurisdiction to use DealFlow. By using the Service you represent that you meet these requirements.</p>
+    </div>
+  </div>
+
+  <!-- SECTION 2 -->
+  <div class="section" id="description">
+    <h2>2. Description of Service</h2>
+    <p>DealFlow is a mobile-first web application designed to help real estate agents manage transactions, track leads, log communications, schedule showings, monitor commissions, and access market data. The Service is available at dealflownow.net and is provided on a subscription basis.</p>
+    <p>DealFlow is a productivity and organizational tool. It is <strong>not</strong>:</p>
+    <ul>
+      <li>A licensed real estate brokerage or brokerage management system</li>
+      <li>A legal record-keeping or compliance platform</li>
+      <li>A provider of legal, financial, tax, or investment advice</li>
+      <li>An MLS (Multiple Listing Service) integration or data feed</li>
+      <li>A document management system compliant with state brokerage record-keeping requirements</li>
+    </ul>
+  </div>
+
+  <!-- SECTION 3 -->
+  <div class="section" id="accounts">
+    <h2>3. Accounts and Registration</h2>
+    <p>To use the Service you must create an account by providing accurate, complete, and current information. You are responsible for:</p>
+    <ul>
+      <li>Maintaining the confidentiality of your account credentials</li>
+      <li>All activity that occurs under your account</li>
+      <li>Notifying us immediately of any unauthorized use of your account at support@dealflownow.net</li>
+      <li>Ensuring your account information remains accurate and up to date</li>
+    </ul>
+    <p>You may not share your account credentials with others or allow others to access your account. Each account is for a single individual user unless you are subscribed to a Team or Brokerage plan.</p>
+    <p>We reserve the right to suspend or terminate accounts that violate these Terms or are found to be inactive for extended periods following reasonable notice.</p>
+  </div>
+
+  <!-- SECTION 4 -->
+  <div class="section" id="subscription">
+    <h2>4. Subscription, Billing, and Cancellation</h2>
+    <p><strong>Onboarding Fee:</strong> A one-time onboarding fee of $30 is charged at the time of account creation. This fee is non-refundable. Beta program participants with valid promotional codes may have this fee waived per the terms of their promotion.</p>
+    <p><strong>Monthly Subscription:</strong> After your 30-day free trial, you will be charged the monthly subscription fee for your selected plan. Current pricing:</p>
+    <ul>
+      <li>Core: $15/month</li>
+      <li>Pro: $20/month (when available)</li>
+      <li>Pro+: $25/month (when available)</li>
+      <li>Intelligence: $35/month (when available)</li>
+    </ul>
+    <p><strong>Free Trial:</strong> Your 30-day free trial begins when you provide payment information. You will not be charged until day 31. Cancel any time before day 31 and you will not be charged the monthly subscription fee. The onboarding fee is non-refundable regardless of cancellation timing.</p>
+    <p><strong>Auto-Renewal:</strong> Your subscription automatically renews each month until cancelled. You authorize us to charge your payment method on file each billing cycle.</p>
+    <p><strong>Upgrades:</strong> You may upgrade between subscription tiers at any time. Only your monthly fee changes when upgrading — no additional onboarding fee is charged for tier upgrades.</p>
+    <p><strong>Cancellation:</strong> You may cancel your subscription at any time through your account settings or by contacting support@dealflownow.net. Cancellation takes effect at the end of your current billing period. We do not provide refunds for partial months.</p>
+    <p><strong>Price Changes:</strong> We reserve the right to change subscription prices with at least 30 days advance notice via email. Continued use of the Service after a price change constitutes acceptance of the new pricing.</p>
+    <p><strong>Payment Processing:</strong> Payments are processed by Stripe. By providing payment information you agree to Stripe's terms of service. We do not store your full payment card information.</p>
+  </div>
+
+  <!-- SECTION 5 -->
+  <div class="section" id="license">
+    <h2>5. License Grant and Restrictions</h2>
+    <p>Subject to your compliance with these Terms and payment of applicable fees, we grant you a limited, non-exclusive, non-transferable, revocable license to access and use the Service for your personal professional use as a real estate agent or related professional.</p>
+    <p><strong>You may not:</strong></p>
+    <ul>
+      <li>Copy, modify, distribute, sell, or lease any part of the Service</li>
+      <li>Reverse engineer, decompile, or attempt to extract the source code of the Service</li>
+      <li>Use the Service to build a competing product or service</li>
+      <li>Share your account credentials or allow others to use your account</li>
+      <li>Use the Service for any illegal purpose or in violation of any applicable law</li>
+      <li>Attempt to gain unauthorized access to any part of the Service or its infrastructure</li>
+      <li>Use automated tools, bots, or scrapers to access or collect data from the Service</li>
+      <li>Upload malicious code, viruses, or any harmful content to the Service</li>
+      <li>Use the Service in any way that could damage, disable, or impair the Service</li>
+    </ul>
+    <p>All intellectual property rights in the Service, including but not limited to software, design, features, and branding, are owned by Puente Translations LLC or its licensors. Nothing in these Terms transfers any ownership of intellectual property to you.</p>
+  </div>
+
+  <!-- SECTION 6 -->
+  <div class="section" id="data">
+    <h2>6. Your Data — Ownership and Responsibility</h2>
+    <p><strong>You own your data.</strong> All deal information, client information, communication logs, documents, and other data you enter into DealFlow ("Your Data") remains your property at all times.</p>
+    <p>By using the Service, you grant us a limited license to store, process, and display Your Data solely for the purpose of providing the Service to you. We do not sell your data to third parties. We do not use your data for advertising purposes.</p>
+    <p><strong>Your responsibilities regarding your data:</strong></p>
+    <ul>
+      <li>You are solely responsible for the accuracy, quality, and legality of Your Data</li>
+      <li>You represent that you have all necessary rights to upload and use the data you enter</li>
+      <li>You are responsible for maintaining appropriate backup copies of critical data</li>
+      <li>You are responsible for ensuring Your Data does not violate any third party's rights</li>
+    </ul>
+    <p><strong>Data upon cancellation:</strong> Upon cancellation of your account, your data will be retained for 30 days during which you may request an export. After 30 days, your data may be permanently deleted. We are not responsible for any data loss following account cancellation.</p>
+  </div>
+
+  <!-- SECTION 7 — CRITICAL FOR REAL ESTATE -->
+  <div class="section" id="documents">
+    <h2>7. Reference Files — Important Disclaimer</h2>
+    <div class="warning-box">
+      <p><strong>⚠️ Important:</strong> DealFlow's Reference Files feature (document upload) is provided for personal convenience and quick reference only. It is NOT a legally compliant record-keeping or document management system.</p>
+    </div>
+    <p>DealFlow's document storage feature allows you to upload photos and files related to your transactions for your own personal reference and convenience. This feature:</p>
+    <ul>
+      <li><strong>Does not constitute</strong> your broker of record's official transaction file</li>
+      <li><strong>Does not satisfy</strong> state-specific brokerage record-keeping requirements (which typically require 3-7 years of retention depending on state)</li>
+      <li><strong>Does not guarantee</strong> document retention for any specific period</li>
+      <li><strong>Does not provide</strong> immutable or non-editable document storage required for regulatory compliance</li>
+      <li><strong>Does not provide</strong> broker master access required for brokerage audits</li>
+    </ul>
+    <p>You are solely responsible for:</p>
+    <ul>
+      <li>Maintaining official transaction records in accordance with your state's real estate regulations</li>
+      <li>Providing your broker of record with all required documentation</li>
+      <li>Complying with all applicable laws regarding real estate transaction record-keeping in your jurisdiction</li>
+    </ul>
+    <p>We expressly disclaim any liability arising from your reliance on DealFlow's Reference Files feature as a compliant record-keeping solution. If your brokerage is audited, DealFlow is not a substitute for your official brokerage records.</p>
+  </div>
+
+  <!-- SECTION 8 — MARKET DATA -->
+  <div class="section" id="market">
+    <h2>8. Market Data — Important Disclaimer</h2>
+    <div class="warning-box">
+      <p><strong>⚠️ Important:</strong> Market data displayed in DealFlow is for informational purposes only. It does not constitute professional financial, investment, or real estate advice.</p>
+    </div>
+    <p>DealFlow may display market data including but not limited to mortgage rates, home price indices, economic indicators, and Federal Reserve information sourced from third-party providers including the Federal Reserve Economic Data (FRED) system and other public sources.</p>
+    <p>Regarding this market data:</p>
+    <ul>
+      <li>Data accuracy and timeliness cannot be guaranteed — data may be delayed, incomplete, or inaccurate</li>
+      <li>Market data is general and informational in nature — it is not personalized advice for any specific client or transaction</li>
+      <li>Data is sourced from third parties over which we have no control — we are not responsible for errors in third-party data</li>
+      <li>Past market trends do not guarantee future results</li>
+      <li>You should not make financial or investment recommendations to clients based solely on data displayed in DealFlow without independent verification</li>
+    </ul>
+    <p>DealFlow is not a licensed financial advisor, mortgage lender, or real estate analyst. Nothing in the Service constitutes financial, mortgage, investment, or real estate advice. Always consult qualified professionals before advising clients on financial matters.</p>
+  </div>
+
+  <!-- SECTION 9 — REAL ESTATE COMPLIANCE -->
+  <div class="section" id="real-estate">
+    <h2>9. Real Estate Compliance Disclaimer</h2>
+    <p>DealFlow is a productivity tool for real estate professionals. It does not and cannot ensure your compliance with:</p>
+    <ul>
+      <li>State real estate licensing requirements</li>
+      <li>Brokerage policies and procedures</li>
+      <li>NAR (National Association of Realtors) Code of Ethics</li>
+      <li>State-specific transaction disclosure requirements</li>
+      <li>Fair housing laws and regulations</li>
+      <li>MLS rules and regulations</li>
+      <li>Any other applicable real estate laws or regulations</li>
+    </ul>
+    <p>You are solely responsible for ensuring your use of DealFlow and your real estate practice complies with all applicable laws, regulations, and professional standards in your jurisdiction. We expressly disclaim any liability arising from your failure to comply with such requirements.</p>
+    <p>The agent network email blast feature is provided as a convenience tool only. You are responsible for ensuring your use of this feature complies with all applicable anti-spam laws (including CAN-SPAM Act), state regulations, and professional conduct standards. You represent that you have appropriate consent or legitimate professional basis for all communications sent through this feature.</p>
+  </div>
+
+  <!-- SECTION 10 -->
+  <div class="section" id="privacy">
+    <h2>10. Privacy and Data Security</h2>
+    <p>We take the security of your data seriously. DealFlow uses industry-standard security practices including:</p>
+    <ul>
+      <li>Encryption in transit (HTTPS/TLS) for all data transmitted to and from the Service</li>
+      <li>Encryption at rest for data stored in our database (Supabase)</li>
+      <li>Row-level security ensuring users can only access their own data</li>
+      <li>Secure authentication through Supabase Auth</li>
+    </ul>
+    <p>However, no system is 100% secure. We cannot guarantee absolute security of your data. In the event of a data breach that affects your personal information, we will notify you as required by applicable law.</p>
+    <p><strong>Data we collect:</strong> We collect information you provide directly (name, email, deal data, client information) and usage data (how you use the Service). We do not sell your personal information to third parties.</p>
+    <p><strong>Third-party services:</strong> DealFlow uses third-party services including Supabase (database and authentication), Stripe (payment processing), Resend (email delivery), and Vercel (hosting). Your use of the Service is subject to these third parties' privacy policies in addition to ours.</p>
+    <p><strong>Client data:</strong> If you enter client information (names, contact details, financial information) into DealFlow, you are responsible for ensuring you have appropriate authorization to store that information in a cloud-based system and that doing so complies with any applicable privacy laws and your clients' expectations.</p>
+  </div>
+
+  <!-- SECTION 11 -->
+  <div class="section" id="warranty">
+    <h2>11. Warranty Disclaimer</h2>
+    <div class="caps">
+      THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND NON-INFRINGEMENT.
+
+      WE DO NOT WARRANT THAT: (A) THE SERVICE WILL BE UNINTERRUPTED, ERROR-FREE, OR FREE FROM VIRUSES OR OTHER HARMFUL COMPONENTS; (B) THE RESULTS OBTAINED FROM USE OF THE SERVICE WILL BE ACCURATE OR RELIABLE; (C) THE SERVICE WILL MEET YOUR REQUIREMENTS; OR (D) DEFECTS IN THE SERVICE WILL BE CORRECTED.
+
+      WE MAKE NO WARRANTIES REGARDING THE ACCURACY, COMPLETENESS, OR TIMELINESS OF ANY MARKET DATA, MORTGAGE RATES, OR OTHER THIRD-PARTY INFORMATION DISPLAYED IN THE SERVICE.
+    </div>
+  </div>
+
+  <!-- SECTION 12 -->
+  <div class="section" id="liability">
+    <h2>12. Limitation of Liability</h2>
+    <div class="caps">
+      TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT SHALL PUENTE TRANSLATIONS LLC, ITS OFFICERS, DIRECTORS, EMPLOYEES, OR AGENTS BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING BUT NOT LIMITED TO LOSS OF PROFITS, REVENUE, DATA, BUSINESS OPPORTUNITIES, OR GOODWILL, ARISING OUT OF OR RELATED TO YOUR USE OF OR INABILITY TO USE THE SERVICE, EVEN IF WE HAVE BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+
+      OUR TOTAL CUMULATIVE LIABILITY TO YOU FOR ALL CLAIMS ARISING OUT OF OR RELATED TO THESE TERMS OR THE SERVICE SHALL NOT EXCEED THE TOTAL AMOUNT YOU PAID TO US IN THE TWELVE (12) MONTHS IMMEDIATELY PRECEDING THE EVENT GIVING RISE TO THE CLAIM, OR ONE HUNDRED DOLLARS ($100), WHICHEVER IS GREATER.
+    </div>
+    <p>Some jurisdictions do not allow the exclusion of certain warranties or limitation of liability. In such jurisdictions, our liability is limited to the greatest extent permitted by law.</p>
+    <p>The limitations above apply to all claims whether based on warranty, contract, tort (including negligence), strict liability, or any other legal theory, and whether or not we have been advised of the possibility of such damages.</p>
+  </div>
+
+  <!-- SECTION 13 -->
+  <div class="section" id="indemnification">
+    <h2>13. Indemnification</h2>
+    <p>You agree to defend, indemnify, and hold harmless Puente Translations LLC and its officers, directors, employees, and agents from and against any claims, damages, losses, liabilities, costs, and expenses (including reasonable attorneys' fees) arising out of or related to:</p>
+    <ul>
+      <li>Your use of the Service</li>
+      <li>Your violation of these Terms</li>
+      <li>Your violation of any applicable law or regulation</li>
+      <li>Your violation of any third party's rights</li>
+      <li>Data or content you submit to the Service</li>
+      <li>Your real estate practice or professional conduct</li>
+      <li>Your failure to comply with real estate regulations, brokerage requirements, or professional standards</li>
+    </ul>
+  </div>
+
+  <!-- SECTION 14 -->
+  <div class="section" id="termination">
+    <h2>14. Termination</h2>
+    <p><strong>By you:</strong> You may cancel your account and terminate these Terms at any time by cancelling your subscription through account settings or contacting support@dealflownow.net.</p>
+    <p><strong>By us:</strong> We reserve the right to suspend or terminate your account and access to the Service at any time, with or without cause, with or without notice, including if we believe you have violated these Terms. We will make reasonable efforts to provide notice where practical.</p>
+    <p><strong>Effect of termination:</strong> Upon termination:</p>
+    <ul>
+      <li>Your right to use the Service ceases immediately</li>
+      <li>We will retain your data for 30 days during which you may request an export</li>
+      <li>After 30 days your data may be permanently deleted</li>
+      <li>You remain liable for all charges incurred prior to termination</li>
+      <li>Provisions of these Terms that by their nature should survive termination will survive, including limitations of liability, indemnification, and governing law</li>
+    </ul>
+  </div>
+
+  <!-- SECTION 15 -->
+  <div class="section" id="changes">
+    <h2>15. Changes to Service and Terms</h2>
+    <p><strong>Changes to the Service:</strong> We are continuously improving DealFlow. We reserve the right to modify, add, or remove features at any time. We will make reasonable efforts to notify you of significant changes via email or in-app notification.</p>
+    <p><strong>Changes to these Terms:</strong> We may update these Terms from time to time. We will notify you of material changes by email and/or by posting a notice in the Service at least 14 days before the changes take effect. Your continued use of the Service after the effective date of any changes constitutes your acceptance of the revised Terms.</p>
+    <p><strong>Feature availability:</strong> Some features described in our marketing materials may be listed as "Coming Soon" and are not yet available. We do not guarantee any specific timeline for releasing features marked as Coming Soon. The availability of such features does not affect the pricing or terms of your current subscription.</p>
+  </div>
+
+  <!-- SECTION 16 -->
+  <div class="section" id="governing">
+    <h2>16. Governing Law and Dispute Resolution</h2>
+    <p><strong>Governing Law:</strong> These Terms are governed by and construed in accordance with the laws of the State of Florida, without regard to its conflict of law provisions.</p>
+    <p><strong>Informal Resolution:</strong> Before initiating any formal dispute process, you agree to contact us at support@dealflownow.net and attempt to resolve the dispute informally. We will make good faith efforts to resolve disputes within 30 days of receiving notice.</p>
+    <p><strong>Arbitration:</strong> If a dispute cannot be resolved informally, you and we agree to resolve any dispute, claim, or controversy arising out of or relating to these Terms or the Service through binding individual arbitration administered by the American Arbitration Association under its Consumer Arbitration Rules. The arbitration will take place in Hillsborough County, Florida. You waive any right to participate in a class action lawsuit or class-wide arbitration.</p>
+    <p><strong>Exceptions:</strong> Either party may seek injunctive or other equitable relief in a court of competent jurisdiction for claims involving intellectual property rights or unauthorized access to the Service.</p>
+    <p><strong>Venue:</strong> For any matters not subject to arbitration, you consent to the exclusive jurisdiction and venue of the state and federal courts located in Hillsborough County, Florida.</p>
+  </div>
+
+  <!-- SECTION 17 -->
+  <div class="section" id="contact">
+    <h2>17. Contact Information</h2>
+    <p>If you have questions about these Terms or the Service, please contact us:</p>
+    <div class="highlight-box">
+      <p><strong>DealFlow</strong><br>
+      Operated by Puente Translations LLC<br>
+      Tampa Bay, Florida<br>
+      Email: <a href="mailto:support@dealflownow.net" style="color: var(--navy);">support@dealflownow.net</a><br>
+      Website: <a href="https://dealflownow.net" style="color: var(--navy);">dealflownow.net</a></p>
+    </div>
+    <p style="margin-top: 1.5rem; font-size: 0.85rem; color: var(--muted);">These Terms of Service were last updated on April 29, 2026. By using DealFlow you acknowledge that you have read, understood, and agree to be bound by these Terms.</p>
+  </div>
+
+</div>
+
+<footer>
+  <span class="logo-footer">Deal<span>Flow</span></span>
+  <p>© 2026 Puente Translations LLC · All rights reserved</p>
+  <p style="margin-top: 0.5rem;"><a href="/">Home</a> · <a href="/terms">Terms of Service</a> · <a href="mailto:support@dealflownow.net">support@dealflownow.net</a></p>
+</footer>
+
+</body>
+</html>

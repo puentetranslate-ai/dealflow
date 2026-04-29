@@ -8,6 +8,7 @@
     "api/send-welcome-email.js": { "runtime": "@vercel/node@3" }
   },
   "rewrites": [
+    { "source": "/terms", "destination": "/terms.html" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }

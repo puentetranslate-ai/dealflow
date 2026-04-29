@@ -153,6 +153,18 @@ export default function SignUp() {
               </>
             )}
           </button>
+
+          <p className="text-center text-muted text-xs mt-3 leading-relaxed">
+            By creating an account you agree to our{' '}
+            <a
+              href="/terms"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gold-dark hover:text-gold underline-offset-2 hover:underline transition-colors"
+            >
+              Terms of Service
+            </a>.
+          </p>
         </form>
 
         <p className="text-center text-muted text-sm mt-6">
