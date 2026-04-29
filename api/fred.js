@@ -16,6 +16,7 @@
 
 const ALLOWED = /^[A-Z0-9_]+$/i
 const DEFAULT_SERIES = 'MORTGAGE30US'
+const FETCH_TIMEOUT_MS = 20000
 
 export default async function handler(req, res) {
   let series = DEFAULT_SERIES
@@ -28,9 +29,21 @@ export default async function handler(req, res) {
 
     const upstreamUrl = `https://fred.stlouisfed.org/graph/fredgraph.csv?id=${encodeURIComponent(series)}`
 
-    const upstream = await fetch(upstreamUrl, {
-      headers: { 'user-agent': 'dealflow-proxy/1.0' },
-    })
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
+
+    let upstream
+    try {
+      upstream = await fetch(upstreamUrl, {
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'DealFlow/1.0 (contact: support@dealflownow.net)',
+          'Accept': 'text/csv,text/plain,*/*',
+        },
+      })
+    } finally {
+      clearTimeout(timeoutId)
+    }
 
     if (!upstream.ok) {
       return res.status(200).json({
@@ -61,12 +74,28 @@ export default async function handler(req, res) {
     res.setHeader('Cache-Control', 's-maxage=86400, stale-while-revalidate=43200')
     return res.status(200).json({ series, data })
   } catch (err) {
-    // Last line of defense — any unexpected error returns the canonical
-    // failure shape so client-side parsing never blows up.
+    // Log the full error to Vercel logs so we can see DNS/connect/TLS codes
+    // that bare err.message hides. Node's fetch wraps the underlying error
+    // in `err.cause` — that's where the real diagnostic lives.
+    const cause = err?.cause
+    console.error('[api/fred] fetch failed', {
+      series,
+      message: err?.message,
+      name: err?.name,
+      causeCode: cause?.code,
+      causeMessage: cause?.message,
+      stack: err?.stack,
+    })
+
+    const detail =
+      err?.name === 'AbortError' ? 'timeout' :
+      cause?.code ? `${err.message} (${cause.code})` :
+      err?.message || 'fetch failed'
+
     return res.status(200).json({
       series,
       data: [],
-      error: err?.message || 'fetch failed',
+      error: detail,
     })
   }
 }
