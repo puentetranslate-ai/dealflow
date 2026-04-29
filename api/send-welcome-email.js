@@ -2,14 +2,19 @@
 // up. Called fire-and-forget from SignUp.jsx; never blocks the signup flow.
 //
 // Required env vars (set in Vercel project settings):
-//   RESEND_API_KEY      — required
-//   RESEND_FROM_EMAIL   — optional (default: 'DealFlow <noreply@dealflownow.net>')
+//   RESEND_API_KEY — required
+//
+// From address is hardcoded to Resend's onboarding sandbox domain while
+// dealflownow.net domain verification is in progress at Resend. NOTE:
+// Resend's onboarding domain only delivers to the email registered on
+// your Resend account; emails to other recipients return 403. Once the
+// custom domain is verified, swap this back to a dealflownow.net sender.
 //
 // Always returns 200 — even on failure — so the caller never has to handle
 // HTTP errors. Inspect the JSON body for { success, error } if needed.
 
 const RESEND_URL = 'https://api.resend.com/emails'
-const DEFAULT_FROM = 'DealFlow <noreply@dealflownow.net>'
+const FROM = 'DealFlow <onboarding@resend.dev>'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -23,7 +28,7 @@ export default async function handler(req, res) {
       error: 'Email service not configured (RESEND_API_KEY missing).',
     })
   }
-  const from = process.env.RESEND_FROM_EMAIL || DEFAULT_FROM
+  const from = FROM
 
   let body
   try {
