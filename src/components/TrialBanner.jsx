@@ -1,7 +1,7 @@
 import { useTrial } from '../context/TrialContext'
 import { ArrowRightIcon } from './Icon'
 
-const STRIPE_URL = 'https://buy.stripe.com/cNi14oetl2c75f19853F601'
+const STRIPE_URL = 'https://buy.stripe.com/cNiaEYgBtaIDePBac93F602'
 
 // Two visual tones based on urgency:
 //   - days 6-9 → subtle (muted gold-tinted strip)

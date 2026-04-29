@@ -316,7 +316,7 @@ function SectionHeader({ title, subtitle }) {
 }
 
 // ─────────────────────────── Subscription card ───────────────────────────
-const STRIPE_ACTIVATE_URL = 'https://buy.stripe.com/cNi14oetl2c75f19853F601'
+const STRIPE_ACTIVATE_URL = 'https://buy.stripe.com/cNiaEYgBtaIDePBac93F602'
 
 function SubscriptionCard() {
   const { loading, daysRemaining, isExpired } = useTrial()

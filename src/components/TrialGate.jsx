@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import { useTrial } from '../context/TrialContext'
 import { ArrowRightIcon, LogoutIcon, LockIcon } from './Icon'
 
-const STRIPE_URL = 'https://buy.stripe.com/cNi14oetl2c75f19853F601'
+const STRIPE_URL = 'https://buy.stripe.com/cNiaEYgBtaIDePBac93F602'
 
 // Full-screen lock shown when the trial has expired (daysRemaining <= 0).
 // Wraps protected page content via AppLayout — when active, the user

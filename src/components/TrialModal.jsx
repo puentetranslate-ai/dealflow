@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useTrial } from '../context/TrialContext'
 import { XIcon, ArrowRightIcon } from './Icon'
 
-const STRIPE_URL = 'https://buy.stripe.com/cNi14oetl2c75f19853F601'
+const STRIPE_URL = 'https://buy.stripe.com/cNiaEYgBtaIDePBac93F602'
 
 // Single hard warning the day before the trial ends. Shows once per session
 // (sessionStorage gate) so it's a real "huh, I should act on this" prompt
