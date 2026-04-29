@@ -16,6 +16,7 @@ import Fab from '../components/Fab'
 import { ArrowRightIcon, BellIcon, FunnelIcon, XIcon, HouseIcon } from '../components/Icon'
 import ShowingCard from '../components/ShowingCard'
 import WelcomeModal from '../components/WelcomeModal'
+import TrialBanner from '../components/TrialBanner'
 import { runDailyNotificationCheck } from '../lib/pushNotifications'
 
 const SORT_OPTIONS = [
@@ -247,6 +248,11 @@ export default function Dashboard() {
       </div>
 
       <div className="px-5 md:px-8 pb-32 md:pb-12">
+        {/* Trial banner — only renders when ≤9 days remain */}
+        <div className="pt-5 md:pt-2">
+          <TrialBanner />
+        </div>
+
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 my-4 text-red-600 text-sm">
             {error}
@@ -254,7 +260,7 @@ export default function Dashboard() {
         )}
 
         {/* ── Stats: mobile 2 cols, desktop 3 cols ── */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-5 mt-5 md:mt-2">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-5">
           <StatCard
             label="Active Deals"
             value={deals.length}

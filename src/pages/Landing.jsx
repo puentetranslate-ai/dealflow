@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 
-const STRIPE_URL = 'https://buy.stripe.com/cNiaEYgBtaIDePBac93F602'
+// All trial CTAs route to /signup — no payment required up front. Stripe
+// links live inside the app (Settings → Subscription) and on the day-30
+// trial-expired gate.
+const SIGNUP_URL = '/signup'
 
 const PROBLEMS = [
   {
@@ -63,7 +66,7 @@ const STEPS = [
   {
     n: 1,
     title: 'Sign up',
-    body: "Create your account in 30 seconds. Card required — you won't be charged for 30 days. Cancel anytime.",
+    body: 'Create your account in 30 seconds. No credit card required. Use the app free for 30 days.',
   },
   {
     n: 2,
@@ -135,7 +138,7 @@ const FAQS = [
   },
   {
     q: 'What happens after the 30-day trial?',
-    a: 'Your card is automatically charged $15/month on day 31. Cancel anytime before then — no charge, no questions asked.',
+    a: "We'll prompt you inside the app a few days before your trial ends. Add a card then to keep your account active. No card is required to sign up — you only enter payment when you decide to continue.",
   },
   {
     q: 'Is my data secure?',
@@ -200,14 +203,12 @@ function Nav({ mobileOpen, setMobileOpen }) {
           >
             Sign In
           </Link>
-          <a
-            href={STRIPE_URL}
-            target="_blank"
-            rel="noopener noreferrer"
+          <Link
+            to={SIGNUP_URL}
             className="bg-gold hover:bg-gold-light text-navy font-semibold rounded-xl px-5 h-10 flex items-center transition-colors"
           >
             Start Free Trial
-          </a>
+          </Link>
         </div>
 
         {/* Mobile hamburger */}
@@ -239,15 +240,13 @@ function Nav({ mobileOpen, setMobileOpen }) {
             >
               Sign In
             </Link>
-            <a
-              href={STRIPE_URL}
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              to={SIGNUP_URL}
               className="bg-gold text-navy text-center font-semibold rounded-xl px-5 h-12 flex items-center justify-center"
               onClick={() => setMobileOpen(false)}
             >
               Start Free Trial
-            </a>
+            </Link>
           </div>
         </div>
       )}
@@ -270,14 +269,12 @@ function Hero() {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3 mt-7 sm:items-center justify-center md:justify-start">
-            <a
-              href={STRIPE_URL}
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              to={SIGNUP_URL}
               className="bg-gold hover:bg-gold-light text-navy font-semibold rounded-xl px-6 h-12 flex items-center justify-center transition-colors"
             >
-              Start Free — 30 Days
-            </a>
+              Start Free — No Card Required
+            </Link>
             <a
               href="#how-it-works"
               className="border border-white/30 text-white hover:bg-white/[0.06] font-semibold rounded-xl px-6 h-12 flex items-center justify-center transition-colors"
@@ -287,7 +284,7 @@ function Hero() {
           </div>
 
           <div className="mt-6 flex items-center justify-center md:justify-start gap-2 text-white/50 text-xs flex-wrap">
-            <span>30-day free trial</span>
+            <span>No credit card required</span>
             <span>·</span>
             <span>Cancel anytime</span>
             <span>·</span>
@@ -595,16 +592,14 @@ function PricingCard({ tier }) {
       <div className="mt-6 pt-6 border-t border-current/[0.08]">
         {tier.available ? (
           <>
-            <a
-              href={STRIPE_URL}
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              to={SIGNUP_URL}
               className="block text-center bg-gold hover:bg-gold-light text-navy font-semibold rounded-xl px-5 h-12 leading-[3rem] transition-colors"
             >
               {tier.cta}
-            </a>
+            </Link>
             <p className={`text-center text-xs mt-3 ${isHero ? 'text-white/60' : 'text-muted'}`}>
-              Beta testers — enter your code at checkout for $0 onboarding fee.
+              Beta testers — enter your code at activation for $0 onboarding fee.
             </p>
           </>
         ) : (
@@ -675,16 +670,14 @@ function FinalCTA() {
         <p className="text-white/70 text-base md:text-lg mt-4">
           Start managing your deals the smart way. 30 days free — no risk.
         </p>
-        <a
-          href={STRIPE_URL}
-          target="_blank"
-          rel="noopener noreferrer"
+        <Link
+          to={SIGNUP_URL}
           className="inline-flex items-center justify-center bg-gold hover:bg-gold-light text-navy font-semibold rounded-xl px-8 h-14 mt-8 text-base transition-colors"
         >
-          Start Free Trial
-        </a>
+          Start Free — No Card Required
+        </Link>
         <p className="text-white/50 text-xs mt-4">
-          30-day free trial · $30 onboarding + $15/month after · Cancel anytime
+          30-day free trial · No credit card · Cancel anytime
         </p>
       </div>
     </section>
@@ -716,7 +709,7 @@ function Footer() {
         <FooterCol title="Account" items={[
           { label: 'Sign In', to: '/login' },
           { label: 'Sign Up', to: '/signup' },
-          { label: 'Free Trial', href: STRIPE_URL, external: true },
+          { label: 'Free Trial', to: '/signup' },
         ]} />
 
         <FooterCol title="Contact" items={[

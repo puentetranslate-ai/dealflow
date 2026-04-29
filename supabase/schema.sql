@@ -9,9 +9,19 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   full_name             text,
   default_commission_pct numeric DEFAULT 3.0,
   deadline_notifications boolean DEFAULT true,
+  trial_started_at      timestamptz DEFAULT now(),
   created_at            timestamptz DEFAULT now(),
   updated_at            timestamptz DEFAULT now()
 );
+
+-- Migration for existing databases — adds trial_started_at if missing
+-- and backfills it from created_at for users created before this column existed.
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS trial_started_at timestamptz DEFAULT now();
+
+UPDATE public.profiles
+  SET trial_started_at = created_at
+  WHERE trial_started_at IS NULL;
 
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 

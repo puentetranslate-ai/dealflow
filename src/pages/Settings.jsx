@@ -13,6 +13,7 @@ import {
 import {
   isPushSupported, getNotificationPermission, subscribeToPush, unsubscribeFromPush,
 } from '../lib/pushNotifications'
+import { useTrial } from '../context/TrialContext'
 
 export default function Settings() {
   const { user, signOut, updatePassword } = useAuth()
@@ -231,6 +232,9 @@ export default function Settings() {
             </div>
           </div>
 
+          {/* Subscription */}
+          <SubscriptionCard />
+
           {/* Notifications */}
           <NotificationsCard userId={user.id} />
 
@@ -307,6 +311,58 @@ function SectionHeader({ title, subtitle }) {
     <div>
       <h2 className="font-display text-lg font-bold text-navy">{title}</h2>
       {subtitle && <p className="text-muted text-xs mt-0.5">{subtitle}</p>}
+    </div>
+  )
+}
+
+// ─────────────────────────── Subscription card ───────────────────────────
+const STRIPE_ACTIVATE_URL = 'https://buy.stripe.com/cNi14oetl2c75f19853F601'
+
+function SubscriptionCard() {
+  const { loading, daysRemaining, isExpired } = useTrial()
+
+  let planLabel = 'Free Trial'
+  let planSub = ''
+  if (loading) {
+    planSub = 'Loading…'
+  } else if (isExpired) {
+    planSub = 'Trial expired — activate to restore access.'
+  } else if (daysRemaining != null) {
+    planSub = `${daysRemaining} ${daysRemaining === 1 ? 'day' : 'days'} remaining`
+  }
+
+  return (
+    <div className="card p-5 md:p-6">
+      <SectionHeader title="Subscription" subtitle="Your DealFlow plan." />
+
+      <div className="mt-4 flex items-center justify-between gap-3 py-2 border-b border-navy/[0.05]">
+        <div>
+          <p className="text-navy font-semibold text-sm">{planLabel}</p>
+          <p className="text-muted text-xs mt-0.5">{planSub}</p>
+        </div>
+        {!isExpired && daysRemaining != null && (
+          <span className={`badge-pill ${
+            daysRemaining <= 5 ? 'bg-gold/15 text-gold-dark' : 'bg-navy/[0.04] text-navy/70'
+          }`}>
+            {daysRemaining <= 5 ? 'Action needed' : 'Active'}
+          </span>
+        )}
+        {isExpired && (
+          <span className="badge-pill bg-red-100 text-red-700">Expired</span>
+        )}
+      </div>
+
+      <a
+        href={STRIPE_ACTIVATE_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="btn-primary w-full mt-5"
+      >
+        Activate Subscription
+      </a>
+      <p className="text-center text-muted text-xs mt-3">
+        $30 onboarding fee + $15/month after · Cancel anytime
+      </p>
     </div>
   )
 }

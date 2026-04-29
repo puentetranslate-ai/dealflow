@@ -49,7 +49,16 @@ export default function SignUp() {
         }),
       }).catch(() => {})
 
-      setSuccess(true)
+      // If Supabase email-confirmation is OFF, signUp returns a session
+      // and the agent is logged in immediately — straight to dashboard,
+      // no Stripe stop. If it's ON (the project default), there's no
+      // session yet and we show the "check your email" screen so they
+      // can verify before logging in.
+      if (data?.session) {
+        navigate('/dashboard', { replace: true })
+      } else {
+        setSuccess(true)
+      }
       setLoading(false)
     }
   }
