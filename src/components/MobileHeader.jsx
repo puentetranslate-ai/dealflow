@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeftIcon, BellIcon, MenuIcon } from './Icon'
+import { ArrowLeftIcon, BellIcon, MenuIcon, HelpIcon } from './Icon'
 import { useMobileDrawer } from '../context/MobileDrawerContext'
 
 // Standard mobile navy header used at the top of pages on small screens.
@@ -67,6 +67,13 @@ export default function MobileHeader({
                   <BellIcon className="w-5 h-5" />
                 </button>
               )}
+              <a
+                href="mailto:support@dealflownow.net"
+                aria-label="Help & support"
+                className={`w-10 h-10 flex items-center justify-center rounded-full ${isNavy ? 'text-white/70 hover:text-white hover:bg-white/[0.06]' : 'text-navy/60 hover:text-navy hover:bg-navy/[0.06]'} transition-colors`}
+              >
+                <HelpIcon className="w-5 h-5" />
+              </a>
               {rightSlot}
             </div>
           </div>

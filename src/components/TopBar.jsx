@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { SearchIcon, PlusIcon, BellIcon } from './Icon'
+import { SearchIcon, PlusIcon, BellIcon, HelpIcon } from './Icon'
 import { QuickLogButton } from './QuickLogTrigger'
 
 export default function TopBar({ search, onSearchChange, searchPlaceholder = 'Search deals, clients, addresses…' }) {
@@ -25,6 +25,13 @@ export default function TopBar({ search, onSearchChange, searchPlaceholder = 'Se
         >
           <BellIcon className="w-5 h-5" />
         </button>
+        <a
+          href="mailto:support@dealflownow.net"
+          aria-label="Help & support"
+          className="w-10 h-10 rounded-xl bg-white border border-navy/[0.06] hover:border-gold/40 text-navy flex items-center justify-center transition-colors"
+        >
+          <HelpIcon className="w-5 h-5" />
+        </a>
         <QuickLogButton />
         <button
           onClick={() => navigate('/deals/new')}

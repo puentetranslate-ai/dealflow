@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { formatDate } from '../lib/utils'
 import LoadingSpinner from './LoadingSpinner'
-import { CameraIcon, FileIcon, TrashIcon, ArrowRightIcon } from './Icon'
+import { CameraIcon, FileIcon, TrashIcon, ArrowRightIcon, InfoIcon } from './Icon'
 
 const BUCKET = 'deal-documents'
 const MAX_BYTES = 10 * 1024 * 1024 // 10 MB
@@ -103,6 +103,14 @@ export default function DocumentsTab({ deal }) {
 
   return (
     <div className="space-y-5">
+      {/* Compliance disclaimer */}
+      <div className="flex items-start gap-2 px-1 text-muted text-xs italic">
+        <InfoIcon className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+        <p className="leading-snug">
+          For personal reference only. Maintain official records with your broker of record per your state's requirements.
+        </p>
+      </div>
+
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-red-600 text-sm">
           {error}

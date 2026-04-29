@@ -202,6 +202,22 @@ export const FlameIcon = (p) => (
   </svg>
 )
 
+export const HelpIcon = (p) => (
+  <svg viewBox="0 0 24 24" {...stroke} {...p}>
+    <circle cx="12" cy="12" r="10" />
+    <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3" />
+    <line x1="12" y1="17" x2="12.01" y2="17" />
+  </svg>
+)
+
+export const InfoIcon = (p) => (
+  <svg viewBox="0 0 24 24" {...stroke} {...p}>
+    <circle cx="12" cy="12" r="10" />
+    <line x1="12" y1="16" x2="12" y2="12" />
+    <line x1="12" y1="8" x2="12.01" y2="8" />
+  </svg>
+)
+
 export const BoltIcon = (p) => (
   <svg viewBox="0 0 24 24" {...stroke} {...p}>
     <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />

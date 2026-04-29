@@ -6,7 +6,10 @@ import AppLayout from '../components/AppLayout'
 import TopBar from '../components/TopBar'
 import MobileHeader from '../components/MobileHeader'
 import LoadingSpinner from '../components/LoadingSpinner'
-import { LogoutIcon, LockIcon, EyeIcon, EyeOffIcon, CheckIcon, BellIcon } from '../components/Icon'
+import {
+  LogoutIcon, LockIcon, EyeIcon, EyeOffIcon, CheckIcon, BellIcon,
+  HelpIcon, FileIcon, MailIcon, ArrowRightIcon,
+} from '../components/Icon'
 import {
   isPushSupported, getNotificationPermission, subscribeToPush, unsubscribeFromPush,
 } from '../lib/pushNotifications'
@@ -247,6 +250,36 @@ export default function Settings() {
             >
               Upgrade Now
             </button>
+          </div>
+
+          {/* Help & Support */}
+          <div className="card p-5 md:p-6">
+            <div className="flex items-start gap-3 mb-4">
+              <span className="w-9 h-9 rounded-xl bg-gold/15 text-gold-dark flex items-center justify-center shrink-0 mt-0.5">
+                <HelpIcon className="w-4 h-4" />
+              </span>
+              <div className="flex-1">
+                <SectionHeader title="Help & Support" subtitle="Docs and direct line to the team." />
+              </div>
+            </div>
+            <a
+              href="https://dealflownow.net/getting-started.pdf"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 py-3 px-1 text-navy hover:text-gold-dark transition-colors min-h-[44px] border-b border-navy/[0.05]"
+            >
+              <FileIcon className="w-4 h-4 text-muted" />
+              <span className="flex-1 text-sm font-medium">Getting Started Guide</span>
+              <ArrowRightIcon className="w-4 h-4 text-muted" />
+            </a>
+            <a
+              href="mailto:support@dealflownow.net"
+              className="flex items-center gap-3 py-3 px-1 text-navy hover:text-gold-dark transition-colors min-h-[44px]"
+            >
+              <MailIcon className="w-4 h-4 text-muted" />
+              <span className="flex-1 text-sm font-medium truncate">support@dealflownow.net</span>
+              <ArrowRightIcon className="w-4 h-4 text-muted" />
+            </a>
           </div>
 
           {/* Sign Out */}

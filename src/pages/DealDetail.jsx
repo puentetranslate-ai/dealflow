@@ -27,7 +27,7 @@ const TABS = [
   { id: 'checklist', label: 'Checklist' },
   { id: 'log', label: 'Communication' },
   { id: 'portal', label: 'Portal' },
-  { id: 'documents', label: 'Documents' },
+  { id: 'documents', label: 'Reference Files' },
 ]
 
 export default function DealDetail() {
