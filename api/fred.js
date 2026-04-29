@@ -1,14 +1,17 @@
-// Vercel serverless proxy for FRED's public CSV graph endpoint.
-// Browsers can't fetch FRED directly because of CORS; this function runs
-// server-side, fetches the CSV, parses it, and returns JSON.
+// Vercel serverless proxy for FRED's official JSON API.
 //
 // Route:    /api/fred?series=MORTGAGE30US
-// Success:  { series, data: [{ date, value }] }
-// Failure:  { series, data: [], error: "<reason>" }   (still HTTP 200)
+// Success:  { series, data: [{ date, value }] }   ← oldest first
+// Failure:  { series, data: [], error: "<reason>" } (still HTTP 200)
 //
-// Always returns valid JSON. Even uncaught crashes inside the handler are
-// trapped by an outer try/catch so the client never sees a blank response
-// or HTML error page.
+// We use the official `api.stlouisfed.org/fred/series/observations` endpoint
+// (which expects an API key and is built for server-to-server traffic)
+// rather than the public `fred.stlouisfed.org/graph/fredgraph.csv` endpoint
+// (which the front of FRED's edge appears to drop from Vercel IPs).
+//
+// Env vars (set in Vercel project settings → Environment Variables):
+//   FRED_API_KEY  — required. Free at
+//                   https://fred.stlouisfed.org/docs/api/api_key.html
 //
 // Cache headers: 24 hours at the edge with a 12-hour stale-while-revalidate
 // so a single agent's first hit per day pays the upstream cost; everyone
@@ -17,6 +20,7 @@
 const ALLOWED = /^[A-Z0-9_]+$/i
 const DEFAULT_SERIES = 'MORTGAGE30US'
 const FETCH_TIMEOUT_MS = 20000
+const FRED_API = 'https://api.stlouisfed.org/fred/series/observations'
 
 export default async function handler(req, res) {
   let series = DEFAULT_SERIES
@@ -27,7 +31,27 @@ export default async function handler(req, res) {
       return res.status(200).json({ series, data: [], error: 'invalid series' })
     }
 
-    const upstreamUrl = `https://fred.stlouisfed.org/graph/fredgraph.csv?id=${encodeURIComponent(series)}`
+    const apiKey = process.env.FRED_API_KEY
+    if (!apiKey) {
+      return res.status(200).json({
+        series,
+        data: [],
+        error: 'FRED_API_KEY not configured',
+      })
+    }
+
+    // Fetch the most recent 52 observations (about 1 year of weekly data,
+    // or 52 months of monthly — enough for everything the Market tab needs).
+    // sort_order=desc returns newest first; we reverse before returning so
+    // the rest of the codebase keeps treating series[last] as "latest".
+    const params = new URLSearchParams({
+      series_id: series,
+      api_key: apiKey,
+      file_type: 'json',
+      sort_order: 'desc',
+      limit: '52',
+    })
+    const upstreamUrl = `${FRED_API}?${params.toString()}`
 
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
@@ -38,7 +62,7 @@ export default async function handler(req, res) {
         signal: controller.signal,
         headers: {
           'User-Agent': 'DealFlow/1.0 (contact: support@dealflownow.net)',
-          'Accept': 'text/csv,text/plain,*/*',
+          'Accept': 'application/json',
         },
       })
     } finally {
@@ -53,19 +77,15 @@ export default async function handler(req, res) {
       })
     }
 
-    const text = await upstream.text()
+    const body = await upstream.json()
+    const observations = Array.isArray(body?.observations) ? body.observations : []
 
-    // FRED returns: "DATE,SERIES_ID\n2024-01-04,6.62\n..."
-    // Skip the header and any rows where value is missing (FRED uses '.').
-    const lines = text.split(/\r?\n/).filter(Boolean)
-    const data = []
-    for (let i = 1; i < lines.length; i++) {
-      const [date, valueRaw] = lines[i].split(',')
-      if (!date) continue
-      const value = parseFloat(valueRaw)
-      if (Number.isNaN(value)) continue
-      data.push({ date, value })
-    }
+    // FRED uses '.' for missing values. Skip those, parse the rest, and
+    // reverse to ascending chronological order (oldest → newest).
+    const data = observations
+      .map((o) => ({ date: o.date, value: parseFloat(o.value) }))
+      .filter((d) => d.date && !Number.isNaN(d.value))
+      .reverse()
 
     if (data.length === 0) {
       return res.status(200).json({ series, data: [], error: 'empty series' })
@@ -74,9 +94,6 @@ export default async function handler(req, res) {
     res.setHeader('Cache-Control', 's-maxage=86400, stale-while-revalidate=43200')
     return res.status(200).json({ series, data })
   } catch (err) {
-    // Log the full error to Vercel logs so we can see DNS/connect/TLS codes
-    // that bare err.message hides. Node's fetch wraps the underlying error
-    // in `err.cause` — that's where the real diagnostic lives.
     const cause = err?.cause
     console.error('[api/fred] fetch failed', {
       series,
@@ -84,7 +101,6 @@ export default async function handler(req, res) {
       name: err?.name,
       causeCode: cause?.code,
       causeMessage: cause?.message,
-      stack: err?.stack,
     })
 
     const detail =
@@ -92,10 +108,6 @@ export default async function handler(req, res) {
       cause?.code ? `${err.message} (${cause.code})` :
       err?.message || 'fetch failed'
 
-    return res.status(200).json({
-      series,
-      data: [],
-      error: detail,
-    })
+    return res.status(200).json({ series, data: [], error: detail })
   }
 }
