@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { useEffect } from 'react'
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import Landing from './pages/Landing'
@@ -21,6 +22,7 @@ import Settings from './pages/Settings'
 export default function App() {
   return (
     <BrowserRouter>
+      <NotificationNavigator />
       <AuthProvider>
         <Routes>
           {/* Public marketing + auth routes */}
@@ -55,4 +57,24 @@ export default function App() {
       </AuthProvider>
     </BrowserRouter>
   )
+}
+
+// Listens for messages posted from the service worker after a notification
+// is tapped. The SW (public/sw-custom.js) sends `{ type: 'NAVIGATE', url }`
+// when an existing tab gets focused — we route there via React Router so
+// the navigation feels instant instead of a full page reload.
+function NotificationNavigator() {
+  const navigate = useNavigate()
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return
+    const onMessage = (event) => {
+      const data = event.data
+      if (data && data.type === 'NAVIGATE' && typeof data.url === 'string') {
+        navigate(data.url)
+      }
+    }
+    navigator.serviceWorker.addEventListener('message', onMessage)
+    return () => navigator.serviceWorker.removeEventListener('message', onMessage)
+  }, [navigate])
+  return null
 }

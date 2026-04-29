@@ -110,10 +110,17 @@ export async function runDailyNotificationCheck(userId) {
   const todayKey = today.toISOString().split('T')[0]
   const stampKey = `notify-fired:${userId}:${todayKey}`
   const fired = new Set((localStorage.getItem(stampKey) || '').split(',').filter(Boolean))
-  const fire = async (id, title, body) => {
+  // `data.url` is consumed by public/sw-custom.js — when the user taps
+  // the notification, the SW reads this URL and routes them to the
+  // matching page in the app.
+  const fire = async (id, title, body, url) => {
     if (fired.has(id)) return
     fired.add(id)
-    await showLocalNotification(title, { body, tag: id })
+    await showLocalNotification(title, {
+      body,
+      tag: id,
+      data: { url: url || '/dashboard' },
+    })
   }
 
   try {
@@ -148,21 +155,28 @@ export async function runDailyNotificationCheck(userId) {
       await fire(
         `check-${c.id}`,
         overdue ? '🔴 Overdue task' : '📋 Due today',
-        `${c.label} on ${addr}`
+        `${c.label} on ${addr}`,
+        c.deal_id ? `/deals/${c.deal_id}` : '/dashboard'
       )
     }
 
     for (const l of (leads.data || [])) {
-      await fire(`lead-${l.id}`, '👤 Follow up today', `${l.first_name} ${l.last_name}`)
+      await fire(
+        `lead-${l.id}`,
+        '👤 Follow up today',
+        `${l.first_name} ${l.last_name}`,
+        '/leads'
+      )
     }
 
     for (const d of (deals.data || [])) {
+      const dealUrl = `/deals/${d.id}`
       if (d.closing_date === sevenDays) {
-        await fire(`close7-${d.id}`, '🔑 Closing in 7 days', d.address)
+        await fire(`close7-${d.id}`, '🔑 Closing in 7 days', d.address, dealUrl)
       } else if (d.closing_date === oneDay) {
-        await fire(`close1-${d.id}`, '🔑 Tomorrow: Closing', d.address)
+        await fire(`close1-${d.id}`, '🔑 Tomorrow: Closing', d.address, dealUrl)
       } else if (d.closing_date === todayKey) {
-        await fire(`close0-${d.id}`, '🔑 Closing today!', d.address)
+        await fire(`close0-${d.id}`, '🔑 Closing today!', d.address, dealUrl)
       }
     }
 
@@ -171,7 +185,12 @@ export async function runDailyNotificationCheck(userId) {
         const showingAt = new Date(`${s.showing_date}T${s.showing_time}`)
         const diffH = (showingAt - today) / 3600000
         if (diffH > 0 && diffH <= 2.25) {
-          await fire(`show-${s.id}`, '🏠 Showing in 2 hours', s.property_address)
+          await fire(
+            `show-${s.id}`,
+            '🏠 Showing in 2 hours',
+            s.property_address,
+            '/calendar'
+          )
         }
       }
     }

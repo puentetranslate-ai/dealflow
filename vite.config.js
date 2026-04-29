@@ -33,6 +33,10 @@ export default defineConfig({
         // landing page from cache, so Vercel's serverless functions never
         // get called from a browser that has visited the site before.
         navigateFallbackDenylist: [/^\/api\//],
+        // Bring our custom notificationclick handler into the SW scope.
+        // public/sw-custom.js is copied to dist/sw-custom.js at build and
+        // imported by the generated SW via importScripts().
+        importScripts: ['/sw-custom.js'],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
