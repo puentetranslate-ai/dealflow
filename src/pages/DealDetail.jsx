@@ -19,8 +19,9 @@ import ShowingCard from '../components/ShowingCard'
 import DocumentsTab from '../components/DocumentsTab'
 import {
   ArrowLeftIcon, ShareIcon, PhoneIcon, MailIcon, MessageIcon, UsersIcon, CheckIcon,
-  CalendarIcon, PhaseDotIcons, ArrowRightIcon, HouseIcon, FileIcon,
+  CalendarIcon, PhaseDotIcons, ArrowRightIcon, HouseIcon, FileIcon, DownloadIcon,
 } from '../components/Icon'
+import { exportDealPdf } from '../lib/pdfExport'
 
 const TABS = [
   { id: 'overview', label: 'Overview' },
@@ -184,6 +185,35 @@ export default function DealDetail() {
     }
   }
 
+  // Track export-in-progress state separately from page loading so the
+  // header button can show a spinner without blanking the page.
+  const [exporting, setExporting] = useState(false)
+
+  const handleExportPdf = async () => {
+    if (!deal || exporting) return
+    setExporting(true)
+    try {
+      // The Checklist tab is lazy — items might not be in state yet if the
+      // user hasn't visited that tab. Pull them on demand for the PDF.
+      let items = checklistItems
+      if (!checklistLoaded) {
+        const { data } = await supabase
+          .from('checklist_items')
+          .select('*')
+          .eq('deal_id', id)
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: true })
+        items = data || []
+      }
+      await exportDealPdf(deal, items)
+    } catch (err) {
+      console.error('PDF export failed:', err)
+      alert('Could not export the PDF. Please try again.')
+    } finally {
+      setExporting(false)
+    }
+  }
+
   // Derived
   const closingDays = deal?.closing_date ? daysUntil(deal.closing_date) : null
   const commission = deal ? calcCommission(deal.sale_price, deal.commission_pct) : 0
@@ -220,6 +250,14 @@ export default function DealDetail() {
         showBack
         rightSlot={
           <>
+            <button
+              onClick={handleExportPdf}
+              disabled={exporting}
+              className="p-2 text-white/70 hover:text-white disabled:opacity-50"
+              aria-label="Export PDF"
+            >
+              {exporting ? <LoadingSpinner size="sm" light /> : <DownloadIcon className="w-5 h-5" />}
+            </button>
             <button
               onClick={handleShare}
               className="p-2 text-white/70 hover:text-white"
@@ -282,6 +320,14 @@ export default function DealDetail() {
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={handleExportPdf}
+            disabled={exporting}
+            className="bg-white border border-navy/10 hover:border-gold/40 text-navy text-sm font-medium rounded-xl px-4 h-10 flex items-center gap-2 transition-colors disabled:opacity-50"
+          >
+            {exporting ? <LoadingSpinner size="sm" /> : <DownloadIcon className="w-4 h-4" />}
+            Export PDF
+          </button>
           <button
             onClick={handleShare}
             className="bg-white border border-navy/10 hover:border-gold/40 text-navy text-sm font-medium rounded-xl px-4 h-10 flex items-center gap-2 transition-colors"
