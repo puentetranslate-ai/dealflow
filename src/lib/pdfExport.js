@@ -304,7 +304,10 @@ function renderChecklistRow(doc, item, x, y) {
   // Label
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(10)
-  doc.setTextColor(item.is_checked ? MUTED : NAVY)
+  // setTextColor needs r,g,b spread — passing the array directly is what was
+  // throwing "Invalid argument" in jsPDF v4.
+  const labelColor = item.is_checked ? MUTED : NAVY
+  doc.setTextColor(...labelColor)
   const labelText = item.is_checked ? `${item.label}` : item.label
   const labelW = PAGE_W - 2 * MARGIN - boxSize - 70
   const lines = doc.splitTextToSize(labelText, labelW)
