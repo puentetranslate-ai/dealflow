@@ -3,8 +3,9 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import {
-  HomeIcon, UsersIcon, FunnelIcon, BarChartIcon, SettingsIcon, CalendarIcon, LogoutIcon, NetworkIcon,
+  HomeIcon, UsersIcon, FunnelIcon, BarChartIcon, SettingsIcon, CalendarIcon, LogoutIcon, NetworkIcon, LockIcon,
 } from './Icon'
+import { isAdmin } from '../lib/admin'
 
 const links = [
   { path: '/dashboard', label: 'Dashboard', Icon: HomeIcon },
@@ -15,6 +16,7 @@ const links = [
   { path: '/settings', label: 'Settings', Icon: SettingsIcon },
   { path: '/agent-network', label: 'Agent Network', Icon: NetworkIcon },
 ]
+const adminLink = { path: '/admin', label: 'Admin', Icon: LockIcon }
 
 export default function Sidebar() {
   const { user, signOut } = useAuth()
@@ -73,7 +75,7 @@ export default function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto">
-        {links.map(({ path, label, Icon, comingSoon, badgeKey }) =>
+        {[...links, ...(isAdmin(user) ? [adminLink] : [])].map(({ path, label, Icon, comingSoon, badgeKey }) =>
           comingSoon ? (
             <div
               key={path}

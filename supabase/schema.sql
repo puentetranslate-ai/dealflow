@@ -23,6 +23,26 @@ UPDATE public.profiles
   SET trial_started_at = created_at
   WHERE trial_started_at IS NULL;
 
+-- Subscription status — tracks paid vs trial state. The Admin page reads
+-- and writes this; the trial gate suppresses when status = 'active'.
+-- Valid values: 'trial' (default), 'active', 'cancelled', 'expired'.
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS subscription_status text DEFAULT 'trial';
+
+-- RLS: the admin (jimmycc24@gmail.com) can read every profile. The existing
+-- "Users can view own profile" policy still applies to everyone else, so
+-- regular users keep their own-row-only access — this just adds an extra
+-- path that fires when the JWT email matches the admin address.
+DROP POLICY IF EXISTS "Admin can read all profiles" ON public.profiles;
+CREATE POLICY "Admin can read all profiles"
+  ON public.profiles FOR SELECT
+  USING (auth.jwt()->>'email' = 'jimmycc24@gmail.com');
+
+DROP POLICY IF EXISTS "Admin can update any profile" ON public.profiles;
+CREATE POLICY "Admin can update any profile"
+  ON public.profiles FOR UPDATE
+  USING (auth.jwt()->>'email' = 'jimmycc24@gmail.com');
+
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can view own profile"

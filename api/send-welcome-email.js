@@ -14,6 +14,8 @@
 
 const RESEND_URL = 'https://api.resend.com/emails'
 const DEFAULT_FROM = 'DealFlow <noreply@mail.dealflownow.net>'
+const ADMIN_FROM = 'DealFlow Admin <noreply@mail.dealflownow.net>'
+const ADMIN_TO   = 'jimmycc24@gmail.com'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -44,8 +46,12 @@ export default async function handler(req, res) {
   const safeName = (firstName && String(firstName).trim()) || 'agent'
   const html = renderEmail(safeName)
 
+  // Fire the user-facing welcome AND the admin notification in parallel.
+  // Both calls return 200-ish results; we surface a combined success/error
+  // shape but never fail the request itself — the caller (SignUp.jsx) is
+  // already fire-and-forget.
   try {
-    const resp = await fetch(RESEND_URL, {
+    const userPromise = fetch(RESEND_URL, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
@@ -58,15 +64,39 @@ export default async function handler(req, res) {
         html,
       }),
     })
-    if (!resp.ok) {
-      let detail = ''
-      try { detail = JSON.stringify(await resp.json()) } catch {}
+
+    // Admin notification — independent of the user email. If Resend hasn't
+    // verified the from-domain yet, this gracefully fails inline and we
+    // log it without surfacing to the user.
+    const adminPromise = sendAdminSignupNotification(apiKey, {
+      email,
+      firstName: safeName,
+      headers: req.headers,
+    })
+
+    const [userResp, adminResult] = await Promise.allSettled([userPromise, adminPromise])
+
+    // Only the user-facing email's success affects the response status.
+    if (userResp.status === 'rejected') {
       return res.status(200).json({
         success: false,
-        error: `resend ${resp.status}${detail ? ` ${detail}` : ''}`,
+        error: userResp.reason?.message || 'send failed',
       })
     }
-    return res.status(200).json({ success: true })
+    const r = userResp.value
+    if (!r.ok) {
+      let detail = ''
+      try { detail = JSON.stringify(await r.json()) } catch {}
+      return res.status(200).json({
+        success: false,
+        error: `resend ${r.status}${detail ? ` ${detail}` : ''}`,
+        adminNotified: adminResult.status === 'fulfilled' && adminResult.value === true,
+      })
+    }
+    return res.status(200).json({
+      success: true,
+      adminNotified: adminResult.status === 'fulfilled' && adminResult.value === true,
+    })
   } catch (e) {
     return res.status(200).json({
       success: false,
@@ -186,4 +216,87 @@ function escapeHtml(s) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;')
+}
+
+// ─────────────────────────── Admin notification ───────────────────────────
+// Vercel automatically populates these geo headers on every request to a
+// serverless function — no third-party API needed, no rate limits, no key.
+function pullGeo(headers = {}) {
+  const get = (k) => headers[k] || headers[k.toLowerCase()] || ''
+  let city = get('x-vercel-ip-city')
+  try { city = city ? decodeURIComponent(city) : '' } catch {}
+  return {
+    city,
+    region:  get('x-vercel-ip-country-region'),
+    country: get('x-vercel-ip-country'),
+    ip:      get('x-real-ip') || (get('x-forwarded-for') || '').split(',')[0].trim(),
+  }
+}
+
+async function sendAdminSignupNotification(apiKey, { email, firstName, headers }) {
+  try {
+    const geo = pullGeo(headers)
+    const locationParts = [geo.city, geo.region, geo.country].filter(Boolean)
+    const location = locationParts.length ? locationParts.join(', ') : 'Unknown'
+    const timestamp = new Date().toISOString()
+
+    const html = renderAdminEmail({
+      firstName: escapeHtml(firstName),
+      email: escapeHtml(email),
+      location: escapeHtml(location),
+      ip: escapeHtml(geo.ip || 'Unknown'),
+      timestamp,
+    })
+
+    const resp = await fetch(RESEND_URL, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: ADMIN_FROM,
+        to: [ADMIN_TO],
+        subject: `🎉 New DealFlow signup: ${firstName}`,
+        html,
+      }),
+    })
+    return resp.ok
+  } catch {
+    return false
+  }
+}
+
+function renderAdminEmail({ firstName, email, location, ip, timestamp }) {
+  return `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#f7f3ec;font-family:sans-serif;">
+  <div style="max-width:560px;margin:0 auto;background:#ffffff;">
+    <div style="background:#0c1e35;padding:24px 32px;">
+      <h1 style="margin:0;font-size:20px;color:#ffffff;font-weight:700;">
+        Deal<span style="color:#c9a84c;">Flow</span>
+        <span style="color:#8a9ab5;font-size:13px;font-weight:400;margin-left:8px;">Admin Notification</span>
+      </h1>
+    </div>
+    <div style="padding:28px 32px;">
+      <h2 style="color:#0c1e35;font-size:18px;margin:0 0 12px;">New signup: ${firstName}</h2>
+      <table style="width:100%;border-collapse:collapse;font-size:14px;">
+        <tr><td style="padding:8px 0;color:#718096;width:120px;">Name</td><td style="padding:8px 0;color:#0c1e35;font-weight:600;">${firstName}</td></tr>
+        <tr style="border-top:1px solid #e8e6e2;"><td style="padding:8px 0;color:#718096;">Email</td><td style="padding:8px 0;color:#0c1e35;font-weight:600;">${email}</td></tr>
+        <tr style="border-top:1px solid #e8e6e2;"><td style="padding:8px 0;color:#718096;">Location</td><td style="padding:8px 0;color:#0c1e35;">${location}</td></tr>
+        <tr style="border-top:1px solid #e8e6e2;"><td style="padding:8px 0;color:#718096;">IP</td><td style="padding:8px 0;color:#0c1e35;font-family:monospace;font-size:12px;">${ip}</td></tr>
+        <tr style="border-top:1px solid #e8e6e2;"><td style="padding:8px 0;color:#718096;">Time</td><td style="padding:8px 0;color:#0c1e35;font-family:monospace;font-size:12px;">${timestamp}</td></tr>
+      </table>
+      <div style="margin-top:24px;text-align:center;">
+        <a href="https://dealflownow.net/admin"
+           style="background:#c9a84c;color:#0c1e35;padding:10px 24px;border-radius:6px;
+                  text-decoration:none;font-weight:700;font-size:14px;display:inline-block;">
+          Open Admin Dashboard
+        </a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>`
 }

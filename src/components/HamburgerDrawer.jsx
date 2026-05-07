@@ -5,8 +5,9 @@ import { useAuth } from '../context/AuthContext'
 import { useMobileDrawer } from '../context/MobileDrawerContext'
 import {
   HomeIcon, FunnelIcon, UsersIcon, BarChartIcon, SettingsIcon, CalendarIcon,
-  XIcon, LogoutIcon, NetworkIcon,
+  XIcon, LogoutIcon, NetworkIcon, LockIcon,
 } from './Icon'
+import { isAdmin } from '../lib/admin'
 
 const links = [
   { path: '/dashboard', label: 'Home', Icon: HomeIcon },
@@ -17,6 +18,7 @@ const links = [
   { path: '/settings', label: 'Settings', Icon: SettingsIcon },
   { path: '/agent-network', label: 'Agent Network', Icon: NetworkIcon },
 ]
+const adminLink = { path: '/admin', label: 'Admin', Icon: LockIcon }
 
 // Slide-out mobile drawer. Lives in AppLayout; opened by the hamburger
 // in MobileHeader; closed by tap-outside or the X button.
@@ -94,7 +96,7 @@ export default function HamburgerDrawer() {
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto">
-          {links.map(({ path, label, Icon, comingSoon }) =>
+          {[...links, ...(isAdmin(user) ? [adminLink] : [])].map(({ path, label, Icon, comingSoon }) =>
             comingSoon ? (
               <div
                 key={path}

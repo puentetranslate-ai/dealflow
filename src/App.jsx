@@ -19,6 +19,7 @@ import Leads from './pages/Leads'
 import LeadForm from './pages/LeadForm'
 import AgentNetwork from './pages/AgentNetwork'
 import Settings from './pages/Settings'
+import Admin from './pages/Admin'
 
 export default function App() {
   return (
@@ -51,6 +52,7 @@ export default function App() {
             <Route path="/leads/:id/edit" element={<LeadForm />} />
             <Route path="/agent-network" element={<AgentNetwork />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/admin" element={<Admin />} />
           </Route>
 
           {/* Unknown URLs land on the landing page */}
