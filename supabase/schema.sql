@@ -36,6 +36,29 @@ UPDATE public.profiles
 ALTER TABLE public.profiles
   ADD COLUMN IF NOT EXISTS subscription_status text DEFAULT 'trial';
 
+-- Trial nurture email tracking — set by api/send-trial-followup.js when a
+-- given day's email goes out. Used by the cron to avoid double-sending.
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS day7_sent_at  timestamptz,
+  ADD COLUMN IF NOT EXISTS day15_sent_at timestamptz,
+  ADD COLUMN IF NOT EXISTS day25_sent_at timestamptz;
+
+-- Stripe linkage. stripe_customer_id is captured on first checkout.session
+-- and used as the primary lookup key for subsequent subscription/invoice
+-- webhooks (avoids the much slower email match path).
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS stripe_customer_id    text,
+  ADD COLUMN IF NOT EXISTS subscription_tier     text,
+  ADD COLUMN IF NOT EXISTS subscription_price_id text,
+  ADD COLUMN IF NOT EXISTS cancel_at_period_end  boolean DEFAULT false,
+  -- Set by invoice.payment_failed and cleared by invoice.payment_succeeded.
+  -- The trial gate / login flow can read this to grant temporary access
+  -- after a card failure instead of immediately cutting users off.
+  ADD COLUMN IF NOT EXISTS grace_period_ends_at  timestamptz;
+
+CREATE INDEX IF NOT EXISTS profiles_stripe_customer_id_idx
+  ON public.profiles (stripe_customer_id);
+
 -- RLS: the admin (jimmycc24@gmail.com) can read every profile. The existing
 -- "Users can view own profile" policy still applies to everyone else, so
 -- regular users keep their own-row-only access — this just adds an extra
@@ -463,3 +486,37 @@ CREATE POLICY "Users can manage own agent contacts" ON public.agent_contacts
   FOR ALL USING (auth.uid() = user_id);
 
 CREATE INDEX IF NOT EXISTS agent_contacts_user_id_idx ON public.agent_contacts (user_id);
+
+
+-- ── Audit Log ─────────────────────────────────────────────────
+-- Append-only event ledger written by api/stripe-webhook.js (and any
+-- future server-side process that wants to leave a trail). The unique
+-- constraint on stripe_event_id is what makes the webhook idempotent —
+-- a duplicate delivery from Stripe's retry queue 409s on insert and
+-- the handler bails out before re-processing the event.
+--
+-- user_id may be NULL when the event is logged before we've resolved
+-- which user it applies to (e.g. a checkout.session.completed where
+-- the customer has no Supabase profile yet — this should be rare but
+-- we still want the row in case we need to reconstruct what happened).
+CREATE TABLE IF NOT EXISTS public.audit_log (
+  id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id           uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  event_type        text NOT NULL,
+  event_data        jsonb,
+  stripe_event_id   text UNIQUE,
+  created_at        timestamptz DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS audit_log_user_id_idx     ON public.audit_log (user_id);
+CREATE INDEX IF NOT EXISTS audit_log_event_type_idx  ON public.audit_log (event_type);
+CREATE INDEX IF NOT EXISTS audit_log_created_at_idx  ON public.audit_log (created_at DESC);
+
+ALTER TABLE public.audit_log ENABLE ROW LEVEL SECURITY;
+
+-- Only the admin can read the audit log from the client. The webhook
+-- writes via the service role key, which bypasses RLS — so no INSERT
+-- policy is needed here.
+CREATE POLICY "Admin can read audit log" ON public.audit_log
+  FOR SELECT
+  USING (auth.jwt()->>'email' = 'jimmycc24@gmail.com');
