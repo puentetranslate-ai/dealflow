@@ -19,9 +19,16 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 ALTER TABLE public.profiles
   ADD COLUMN IF NOT EXISTS trial_started_at timestamptz DEFAULT now();
 
+-- IMPORTANT: `ALTER TABLE ... ADD COLUMN ... DEFAULT now()` evaluates now()
+-- ONCE at migration time and writes that single timestamp into every existing
+-- row. So a `WHERE trial_started_at IS NULL` backfill is a no-op — every row
+-- got the migration-run timestamp instead of NULL, leaving them all with the
+-- same (wrong) trial start date. Fix: backfill any row whose trial_started_at
+-- doesn't already match its created_at. Idempotent and safe to re-run.
 UPDATE public.profiles
-  SET trial_started_at = created_at
-  WHERE trial_started_at IS NULL;
+   SET trial_started_at = created_at
+ WHERE trial_started_at IS DISTINCT FROM created_at
+   AND created_at IS NOT NULL;
 
 -- Subscription status — tracks paid vs trial state. The Admin page reads
 -- and writes this; the trial gate suppresses when status = 'active'.

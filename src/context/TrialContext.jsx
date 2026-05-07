@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from './AuthContext'
+import { TRIAL_LENGTH_DAYS, trialDaysRemaining } from '../lib/admin'
 
 // Centralizes trial-state computation so the banner, modal, gate, and the
 // Settings → Subscription card can all share one source of truth.
@@ -8,8 +9,10 @@ import { useAuth } from './AuthContext'
 // Reads `profiles.trial_started_at`. The trial is 30 days from that date.
 // If the column doesn't exist yet (schema migration hasn't run), or if the
 // user isn't logged in, returns a neutral state where everything is allowed.
+//
+// All day-math is delegated to ../lib/admin so the Admin dashboard and the
+// in-app trial UI can never disagree about how many days are left.
 
-const TRIAL_LENGTH_DAYS = 30
 const TrialContext = createContext(null)
 
 export function TrialProvider({ children }) {
@@ -51,8 +54,7 @@ export function TrialProvider({ children }) {
           return
         }
         const startedAt = new Date(data.trial_started_at)
-        const elapsed = (Date.now() - startedAt.getTime()) / 86400000
-        const remaining = Math.max(0, Math.ceil(TRIAL_LENGTH_DAYS - elapsed))
+        const remaining = trialDaysRemaining(data.trial_started_at)
         setState({
           loading: false,
           trialStartedAt: startedAt,
