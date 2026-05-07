@@ -3,13 +3,17 @@
 //
 // Required env vars (set in Vercel project settings):
 //   RESEND_API_KEY      — required
-//   RESEND_FROM_EMAIL   — optional (default: 'DealFlow <noreply@dealflownow.net>')
+//   RESEND_FROM_EMAIL   — optional (default: 'DealFlow <noreply@mail.dealflownow.net>')
+//
+// We send from the mail.dealflownow.net subdomain because Namecheap's free
+// DNS doesn't expose MX-record creation on the apex domain — the subdomain
+// approach keeps Resend's verification simple while leaving the apex untouched.
 //
 // Always returns 200 — even on failure — so the caller never has to handle
 // HTTP errors. Inspect the JSON body for { success, error } if needed.
 
 const RESEND_URL = 'https://api.resend.com/emails'
-const DEFAULT_FROM = 'DealFlow <noreply@dealflownow.net>'
+const DEFAULT_FROM = 'DealFlow <noreply@mail.dealflownow.net>'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {

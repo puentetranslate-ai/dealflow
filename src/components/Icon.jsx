@@ -202,6 +202,25 @@ export const FlameIcon = (p) => (
   </svg>
 )
 
+export const PencilIcon = (p) => (
+  <svg viewBox="0 0 24 24" {...stroke} {...p}>
+    <path d="M12 20h9" />
+    <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
+  </svg>
+)
+
+export const ChevronUpIcon = (p) => (
+  <svg viewBox="0 0 24 24" {...stroke} {...p}>
+    <polyline points="18 15 12 9 6 15" />
+  </svg>
+)
+
+export const ChevronDownIcon = (p) => (
+  <svg viewBox="0 0 24 24" {...stroke} {...p}>
+    <polyline points="6 9 12 15 18 9" />
+  </svg>
+)
+
 export const DownloadIcon = (p) => (
   <svg viewBox="0 0 24 24" {...stroke} {...p}>
     <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />

@@ -20,6 +20,7 @@ import DocumentsTab from '../components/DocumentsTab'
 import {
   ArrowLeftIcon, ShareIcon, PhoneIcon, MailIcon, MessageIcon, UsersIcon, CheckIcon,
   CalendarIcon, PhaseDotIcons, ArrowRightIcon, HouseIcon, FileIcon, DownloadIcon,
+  PencilIcon, ChevronUpIcon, ChevronDownIcon, TrashIcon, PlusIcon, XIcon,
 } from '../components/Icon'
 import { exportDealPdf } from '../lib/pdfExport'
 
@@ -103,6 +104,7 @@ export default function DealDetail() {
     const { data, error } = await supabase
       .from('checklist_items').select('*')
       .eq('deal_id', id).eq('user_id', user.id)
+      .order('sort_order', { ascending: true })
       .order('created_at', { ascending: true })
     if (!error) {
       if (data.length === 0) await seedChecklist()
@@ -117,9 +119,17 @@ export default function DealDetail() {
     const checklist = getDefaultChecklist(deal?.agent_role)
     const items = []
     for (const [phase, labels] of Object.entries(checklist)) {
-      for (const label of labels) {
-        items.push({ deal_id: id, user_id: user.id, label, phase, is_checked: false })
-      }
+      labels.forEach((label, i) => {
+        items.push({
+          deal_id: id,
+          user_id: user.id,
+          label,
+          phase,
+          is_checked: false,
+          is_custom: false,
+          sort_order: i,
+        })
+      })
     }
     const { data } = await supabase.from('checklist_items').insert(items).select()
     setChecklistItems(data || [])
@@ -144,6 +154,82 @@ export default function DealDetail() {
       .update({ due_date: date || null })
       .eq('id', itemId).eq('user_id', user.id)
     setEditingDueDate(null)
+  }
+
+  // ── Editable checklist mutations (Option A) ──
+  const saveItemLabel = async (itemId, label) => {
+    const trimmed = (label || '').trim()
+    if (!trimmed) return
+    setChecklistItems((prev) =>
+      prev.map((i) => (i.id === itemId ? { ...i, label: trimmed } : i))
+    )
+    await supabase.from('checklist_items')
+      .update({ label: trimmed })
+      .eq('id', itemId).eq('user_id', user.id)
+  }
+
+  const saveItemNotes = async (itemId, notes) => {
+    const value = (notes || '').trim() || null
+    setChecklistItems((prev) =>
+      prev.map((i) => (i.id === itemId ? { ...i, notes: value } : i))
+    )
+    await supabase.from('checklist_items')
+      .update({ notes: value })
+      .eq('id', itemId).eq('user_id', user.id)
+  }
+
+  const deleteItem = async (item) => {
+    setChecklistItems((prev) => prev.filter((i) => i.id !== item.id))
+    await supabase.from('checklist_items')
+      .delete().eq('id', item.id).eq('user_id', user.id)
+  }
+
+  const addCustomItem = async (phase, label) => {
+    const trimmed = (label || '').trim()
+    if (!trimmed) return
+    // sort_order = max in this phase + 1, so the new item lands at the bottom
+    const phaseItems = checklistItems.filter((i) => i.phase === phase)
+    const maxOrder = phaseItems.reduce((m, i) => Math.max(m, i.sort_order ?? 0), -1)
+    const { data, error } = await supabase.from('checklist_items')
+      .insert({
+        deal_id: id,
+        user_id: user.id,
+        label: trimmed,
+        phase,
+        is_checked: false,
+        is_custom: true,
+        sort_order: maxOrder + 1,
+      })
+      .select().single()
+    if (!error && data) {
+      setChecklistItems((prev) => [...prev, data])
+    }
+  }
+
+  // Swap sort_order with the neighbor in the same phase. Direction: -1 (up) or +1 (down).
+  const reorderItem = async (item, direction) => {
+    const phaseItems = checklistItems
+      .filter((i) => i.phase === item.phase)
+      .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+    const idx = phaseItems.findIndex((i) => i.id === item.id)
+    const swapIdx = idx + direction
+    if (idx < 0 || swapIdx < 0 || swapIdx >= phaseItems.length) return
+    const a = phaseItems[idx]
+    const b = phaseItems[swapIdx]
+    // Swap on the server (two updates) and optimistically in state
+    setChecklistItems((prev) =>
+      prev.map((i) => {
+        if (i.id === a.id) return { ...i, sort_order: b.sort_order }
+        if (i.id === b.id) return { ...i, sort_order: a.sort_order }
+        return i
+      })
+    )
+    await Promise.all([
+      supabase.from('checklist_items').update({ sort_order: b.sort_order })
+        .eq('id', a.id).eq('user_id', user.id),
+      supabase.from('checklist_items').update({ sort_order: a.sort_order })
+        .eq('id', b.id).eq('user_id', user.id),
+    ])
   }
 
   const fetchLog = async () => {
@@ -202,6 +288,7 @@ export default function DealDetail() {
           .select('*')
           .eq('deal_id', id)
           .eq('user_id', user.id)
+          .order('sort_order', { ascending: true })
           .order('created_at', { ascending: true })
         items = data || []
       }
@@ -229,7 +316,16 @@ export default function DealDetail() {
   const dealPhases = getPhasesForRole(deal?.agent_role).filter((p) => p !== 'Closed')
 
   const groupedChecklist = dealPhases.reduce((acc, phase) => {
-    acc[phase] = checklistItems.filter((i) => i.phase === phase)
+    acc[phase] = checklistItems
+      .filter((i) => i.phase === phase)
+      .sort((a, b) => {
+        const ao = a.sort_order ?? 0
+        const bo = b.sort_order ?? 0
+        if (ao !== bo) return ao - bo
+        // Tiebreaker: insertion order (created_at). Default-seeded items
+        // pre-migration all share sort_order=0; created_at keeps them stable.
+        return new Date(a.created_at || 0) - new Date(b.created_at || 0)
+      })
     return acc
   }, {})
 
@@ -388,6 +484,11 @@ export default function DealDetail() {
                 onEdit={setEditingDueDate}
                 onToggle={toggleItem}
                 onSaveDate={saveDueDate}
+                onSaveLabel={saveItemLabel}
+                onSaveNotes={saveItemNotes}
+                onDelete={deleteItem}
+                onAddCustom={addCustomItem}
+                onReorder={reorderItem}
               />
             ) : (
               <div className="flex justify-center py-12"><LoadingSpinner /></div>
@@ -674,12 +775,22 @@ function ActionBtn({ href, icon, label, disabled }) {
 }
 
 // ─────────────────────────── Checklist tab ───────────────────────────
-function ChecklistTab({ grouped, phases, editingId, onEdit, onToggle, onSaveDate }) {
+// Editable per-deal checklist (Option A). Each item supports:
+//   - toggle complete (existing)
+//   - inline pencil-edit of the label
+//   - free-form notes textarea (auto-save on blur, expanded view)
+//   - delete (trash icon — handled here directly, not pushed up)
+//   - reorder via stacked up/down chevrons (no drag-and-drop dep)
+// Each phase has a "+ Add custom item" affordance at the bottom.
+
+function ChecklistTab({
+  grouped, phases, editingId, onEdit, onToggle, onSaveDate,
+  onSaveLabel, onSaveNotes, onDelete, onAddCustom, onReorder,
+}) {
   return (
     <div className="space-y-5">
       {phases.map((phase) => {
         const items = grouped[phase] || []
-        if (items.length === 0) return null
         const phaseStyle = PHASE_STYLES[phase]
         const doneCount = items.filter((i) => i.is_checked).length
 
@@ -696,80 +807,283 @@ function ChecklistTab({ grouped, phases, editingId, onEdit, onToggle, onSaveDate
             </div>
 
             <div className="card overflow-hidden divide-y divide-navy/[0.04]">
-              {items.map((item) => {
-                const pastDue = !item.is_checked && isPastDue(item.due_date)
-                const isEditingThis = editingId === item.id
+              {items.map((item, idx) => (
+                <ChecklistRow
+                  key={item.id}
+                  item={item}
+                  isFirst={idx === 0}
+                  isLast={idx === items.length - 1}
+                  isEditingDate={editingId === item.id}
+                  onEditDate={onEdit}
+                  onToggle={onToggle}
+                  onSaveDate={onSaveDate}
+                  onSaveLabel={onSaveLabel}
+                  onSaveNotes={onSaveNotes}
+                  onDelete={onDelete}
+                  onReorder={onReorder}
+                />
+              ))}
 
-                return (
-                  <div key={item.id} className={`px-4 py-3 ${pastDue ? 'bg-red-50' : ''}`}>
-                    <div className="flex items-start gap-3">
-                      <button
-                        onClick={() => onToggle(item)}
-                        className={`w-5 h-5 rounded-md border-2 mt-0.5 shrink-0 flex items-center justify-center transition-colors ${
-                          item.is_checked
-                            ? 'bg-green-500 border-green-500'
-                            : pastDue
-                            ? 'border-red-400 bg-white'
-                            : 'border-navy/20 bg-white hover:border-gold'
-                        }`}
-                        aria-pressed={item.is_checked}
-                      >
-                        {item.is_checked && (
-                          <CheckIcon className="w-3 h-3 text-white" strokeWidth={3} />
-                        )}
-                      </button>
-
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-sm leading-snug ${
-                          item.is_checked
-                            ? 'line-through text-muted'
-                            : pastDue ? 'text-red-600 font-medium' : 'text-navy'
-                        }`}>
-                          {item.label}
-                        </p>
-
-                        {isEditingThis ? (
-                          <div className="flex items-center gap-2 mt-2">
-                            <input
-                              type="date"
-                              defaultValue={item.due_date || ''}
-                              className="text-xs border border-navy/15 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-gold"
-                              onBlur={(e) => onSaveDate(item.id, e.target.value)}
-                              autoFocus
-                            />
-                            <button
-                              onClick={() => onSaveDate(item.id, '')}
-                              className="text-xs text-muted hover:text-navy"
-                            >
-                              Clear
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => onEdit(item.id)}
-                            className="flex items-center gap-1.5 mt-1 group"
-                          >
-                            <CalendarIcon className="w-3.5 h-3.5 text-muted group-hover:text-gold-dark transition-colors" />
-                            <span className={`text-xs ${
-                              item.due_date
-                                ? pastDue
-                                  ? 'text-red-500 font-semibold'
-                                  : 'text-gold-dark font-medium'
-                                : 'text-muted'
-                            }`}>
-                              {item.due_date ? formatDate(item.due_date) : 'Set due date'}
-                            </span>
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
+              {/* Add custom item — sits at the bottom of each phase block */}
+              <AddCustomRow phase={phase} onAdd={onAddCustom} />
             </div>
           </div>
         )
       })}
+    </div>
+  )
+}
+
+function ChecklistRow({
+  item, isFirst, isLast, isEditingDate,
+  onEditDate, onToggle, onSaveDate,
+  onSaveLabel, onSaveNotes, onDelete, onReorder,
+}) {
+  const pastDue = !item.is_checked && isPastDue(item.due_date)
+  const [expanded, setExpanded] = useState(false)
+  const [editingLabel, setEditingLabel] = useState(false)
+  const [labelDraft, setLabelDraft] = useState(item.label)
+  const [notesDraft, setNotesDraft] = useState(item.notes || '')
+
+  // Sync drafts when the item changes from outside (e.g. after a save).
+  useEffect(() => { setLabelDraft(item.label) }, [item.label])
+  useEffect(() => { setNotesDraft(item.notes || '') }, [item.notes])
+
+  const commitLabel = () => {
+    setEditingLabel(false)
+    if (labelDraft.trim() && labelDraft.trim() !== item.label) {
+      onSaveLabel(item.id, labelDraft)
+    } else {
+      setLabelDraft(item.label)
+    }
+  }
+
+  const cancelLabel = () => {
+    setLabelDraft(item.label)
+    setEditingLabel(false)
+  }
+
+  const commitNotes = () => {
+    if ((notesDraft || '').trim() !== (item.notes || '').trim()) {
+      onSaveNotes(item.id, notesDraft)
+    }
+  }
+
+  const handleDelete = () => {
+    if (confirm(`Delete "${item.label}"?`)) onDelete(item)
+  }
+
+  return (
+    <div className={`px-4 py-3 ${pastDue ? 'bg-red-50' : ''}`}>
+      <div className="flex items-start gap-2">
+        {/* Reorder controls — stacked up/down chevrons.
+            Always rendered; first/last items have one disabled. */}
+        <div className="flex flex-col -my-1 shrink-0">
+          <button
+            onClick={() => onReorder(item, -1)}
+            disabled={isFirst}
+            aria-label="Move up"
+            className="w-5 h-4 flex items-center justify-center text-muted hover:text-navy disabled:opacity-20 disabled:cursor-not-allowed"
+          >
+            <ChevronUpIcon className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={() => onReorder(item, +1)}
+            disabled={isLast}
+            aria-label="Move down"
+            className="w-5 h-4 flex items-center justify-center text-muted hover:text-navy disabled:opacity-20 disabled:cursor-not-allowed"
+          >
+            <ChevronDownIcon className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        {/* Toggle */}
+        <button
+          onClick={() => onToggle(item)}
+          className={`w-5 h-5 rounded-md border-2 mt-0.5 shrink-0 flex items-center justify-center transition-colors ${
+            item.is_checked
+              ? 'bg-green-500 border-green-500'
+              : pastDue
+              ? 'border-red-400 bg-white'
+              : 'border-navy/20 bg-white hover:border-gold'
+          }`}
+          aria-pressed={item.is_checked}
+        >
+          {item.is_checked && <CheckIcon className="w-3 h-3 text-white" strokeWidth={3} />}
+        </button>
+
+        {/* Label + due date + expand row */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex-1 min-w-0">
+              {editingLabel ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={labelDraft}
+                    onChange={(e) => setLabelDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') { e.preventDefault(); commitLabel() }
+                      if (e.key === 'Escape') { e.preventDefault(); cancelLabel() }
+                    }}
+                    onBlur={commitLabel}
+                    autoFocus
+                    className="flex-1 text-sm border border-gold/40 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-gold/30"
+                  />
+                </div>
+              ) : (
+                <p
+                  onClick={() => setEditingLabel(true)}
+                  className={`text-sm leading-snug cursor-text ${
+                    item.is_checked
+                      ? 'line-through text-muted'
+                      : pastDue ? 'text-red-600 font-medium' : 'text-navy'
+                  }`}
+                >
+                  {item.label}
+                  {item.is_custom && (
+                    <span className="ml-2 text-[10px] font-bold uppercase tracking-wider text-gold-dark">
+                      Custom
+                    </span>
+                  )}
+                </p>
+              )}
+
+              {/* Compact secondary row: due date + expand toggle + edit + delete */}
+              <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                {isEditingDate ? (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="date"
+                      defaultValue={item.due_date || ''}
+                      className="text-xs border border-navy/15 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-gold"
+                      onBlur={(e) => onSaveDate(item.id, e.target.value)}
+                      autoFocus
+                    />
+                    <button onClick={() => onSaveDate(item.id, '')} className="text-xs text-muted hover:text-navy">
+                      Clear
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => onEditDate(item.id)}
+                    className="flex items-center gap-1 group"
+                  >
+                    <CalendarIcon className="w-3.5 h-3.5 text-muted group-hover:text-gold-dark transition-colors" />
+                    <span className={`text-xs ${
+                      item.due_date
+                        ? pastDue ? 'text-red-500 font-semibold' : 'text-gold-dark font-medium'
+                        : 'text-muted'
+                    }`}>
+                      {item.due_date ? formatDate(item.due_date) : 'Set due date'}
+                    </span>
+                  </button>
+                )}
+
+                <button
+                  onClick={() => setExpanded((v) => !v)}
+                  className="flex items-center gap-1 text-xs text-muted hover:text-navy transition-colors"
+                >
+                  <PencilIcon className="w-3 h-3" />
+                  {item.notes ? 'Notes' : 'Add notes'}
+                  {item.notes && !expanded && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-gold-dark" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Right-side controls */}
+            <div className="flex items-center gap-1 shrink-0">
+              {!editingLabel && (
+                <button
+                  onClick={() => setEditingLabel(true)}
+                  aria-label="Edit"
+                  className="w-7 h-7 rounded-md text-muted hover:text-navy hover:bg-navy/[0.05] flex items-center justify-center transition-colors"
+                >
+                  <PencilIcon className="w-3.5 h-3.5" />
+                </button>
+              )}
+              <button
+                onClick={handleDelete}
+                aria-label="Delete"
+                className="w-7 h-7 rounded-md text-muted hover:text-red-500 hover:bg-red-50 flex items-center justify-center transition-colors"
+              >
+                <TrashIcon className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Notes panel — auto-save on blur */}
+          {expanded && (
+            <div className="mt-3">
+              <textarea
+                value={notesDraft}
+                onChange={(e) => setNotesDraft(e.target.value)}
+                onBlur={commitNotes}
+                placeholder="Add notes for this item — vendors, lender contacts, dollar amounts, anything you'll want when you come back to it."
+                rows={3}
+                className="input-field resize-none text-sm"
+              />
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function AddCustomRow({ phase, onAdd }) {
+  const [adding, setAdding] = useState(false)
+  const [draft, setDraft] = useState('')
+
+  const submit = () => {
+    const trimmed = draft.trim()
+    if (!trimmed) { setAdding(false); return }
+    onAdd(phase, trimmed)
+    setDraft('')
+    setAdding(false)
+  }
+
+  if (!adding) {
+    return (
+      <button
+        onClick={() => setAdding(true)}
+        className="w-full px-4 py-3 text-left text-xs font-semibold text-gold-dark hover:bg-cream/60 transition-colors flex items-center gap-1.5"
+      >
+        <PlusIcon className="w-3.5 h-3.5" />
+        Add custom item
+      </button>
+    )
+  }
+
+  return (
+    <div className="px-4 py-3 flex items-center gap-2 bg-cream/60">
+      <input
+        type="text"
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') { e.preventDefault(); submit() }
+          if (e.key === 'Escape') { setDraft(''); setAdding(false) }
+        }}
+        autoFocus
+        placeholder="What needs to happen?"
+        className="flex-1 text-sm border border-gold/40 rounded-md px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-gold/30 bg-white"
+      />
+      <button
+        onClick={submit}
+        className="bg-gold hover:bg-gold-light text-navy text-xs font-semibold rounded-md px-3 h-8 transition-colors"
+      >
+        Add
+      </button>
+      <button
+        onClick={() => { setDraft(''); setAdding(false) }}
+        aria-label="Cancel"
+        className="w-8 h-8 rounded-md text-muted hover:text-navy hover:bg-navy/[0.05] flex items-center justify-center transition-colors"
+      >
+        <XIcon className="w-4 h-4" />
+      </button>
     </div>
   )
 }

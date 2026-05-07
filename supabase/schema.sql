@@ -115,8 +115,16 @@ CREATE TABLE IF NOT EXISTS public.checklist_items (
   phase       text NOT NULL,
   is_checked  boolean DEFAULT false,
   due_date    date,
+  notes       text,
+  is_custom   boolean DEFAULT false,
+  sort_order  integer DEFAULT 0,
   created_at  timestamptz DEFAULT now()
 );
+
+-- Migration for existing databases — adds the editable-checklist columns.
+ALTER TABLE public.checklist_items ADD COLUMN IF NOT EXISTS notes text;
+ALTER TABLE public.checklist_items ADD COLUMN IF NOT EXISTS is_custom boolean DEFAULT false;
+ALTER TABLE public.checklist_items ADD COLUMN IF NOT EXISTS sort_order integer DEFAULT 0;
 
 ALTER TABLE public.checklist_items ENABLE ROW LEVEL SECURITY;
 

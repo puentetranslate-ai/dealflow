@@ -174,12 +174,23 @@ export default function DealForm() {
 
   const seedChecklist = async (dealId) => {
     // Seed only the phases relevant to the agent's side of the deal.
+    // sort_order starts at 0 and increments within each phase so default
+    // items keep their canonical order; custom items added later get
+    // higher sort_order values and naturally sort below.
     const checklist = getDefaultChecklist(form.agent_role)
     const items = []
     for (const [phase, labels] of Object.entries(checklist)) {
-      for (const label of labels) {
-        items.push({ deal_id: dealId, user_id: user.id, label, phase, is_checked: false })
-      }
+      labels.forEach((label, i) => {
+        items.push({
+          deal_id: dealId,
+          user_id: user.id,
+          label,
+          phase,
+          is_checked: false,
+          is_custom: false,
+          sort_order: i,
+        })
+      })
     }
     const { error } = await supabase.from('checklist_items').insert(items)
     if (error) console.warn('Checklist seed failed:', error.message)

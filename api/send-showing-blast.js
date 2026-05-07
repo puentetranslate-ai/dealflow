@@ -7,11 +7,11 @@
 //
 // Required env vars (set in Vercel project settings, NOT in client .env):
 //   RESEND_API_KEY      — your Resend API key
-//   RESEND_FROM_EMAIL   — optional, defaults to DealFlow <noreply@dealflownow.net>
+//   RESEND_FROM_EMAIL   — optional, defaults to DealFlow <noreply@mail.dealflownow.net>
 
 const RESEND_URL = 'https://api.resend.com/emails'
 const MAX_RECIPIENTS = 50
-const DEFAULT_FROM = 'DealFlow <noreply@dealflownow.net>'
+const DEFAULT_FROM = 'DealFlow <noreply@mail.dealflownow.net>'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
