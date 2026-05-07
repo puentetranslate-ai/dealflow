@@ -50,10 +50,12 @@ const MAX_EVENT_AGE_SECONDS = 300
 // They look like 'price_1ABCxyz…'.
 // ───────────────────────────────────────────────────────────────────
 const PRICE_ID_TO_TIER = {
-  // 'price_1ABCxyz...': 'beta',
-  // 'price_1DEFxyz...': 'pro',
-  // 'price_1GHIxyz...': 'pro_plus',
-  // 'price_1JKLxyz...': 'intelligence',
+  'price_1TP134LyOY8ujBqf8YnCm1DM': 'beta', // $15/mo DealFlow Monthly subscription
+  'price_1TRYJ0LyOY8ujBqfuIg0UBgN': 'beta', // $30 one-time onboarding fee
+  // Pro / Pro+ / Intelligence price IDs go here once those products exist:
+  // 'price_...': 'pro',
+  // 'price_...': 'pro_plus',
+  // 'price_...': 'intelligence',
 }
 const DEFAULT_TIER = 'beta'
 
