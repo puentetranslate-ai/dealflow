@@ -7,7 +7,7 @@ import {
 } from './Icon'
 import { isAdmin } from '../lib/admin'
 import { useSubscription } from '../context/SubscriptionContext'
-import { PLACEHOLDER_PRO_URL, PRO_PRICE_LABEL } from '../lib/upgradeLinks'
+import { PRO_CHECKOUT_URL, PRO_PRICE_LABEL } from '../lib/upgradeLinks'
 
 const links = [
   { path: '/dashboard', label: 'Dashboard', Icon: HomeIcon },
@@ -124,7 +124,7 @@ export default function Sidebar() {
               {PRO_PRICE_LABEL} — give buyers and sellers a private milestone tracker that updates in real time.
             </p>
             <a
-              href={PLACEHOLDER_PRO_URL}
+              href={PRO_CHECKOUT_URL}
               target="_blank"
               rel="noopener noreferrer"
               className="mt-3 w-full bg-gold text-navy font-semibold text-sm rounded-lg py-2 hover:bg-gold-light transition-colors text-center inline-block"

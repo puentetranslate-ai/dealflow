@@ -52,8 +52,8 @@ const MAX_EVENT_AGE_SECONDS = 300
 const PRICE_ID_TO_TIER = {
   'price_1TP134LyOY8ujBqf8YnCm1DM': 'beta', // $15/mo DealFlow Monthly subscription
   'price_1TRYJ0LyOY8ujBqfuIg0UBgN': 'beta', // $30 one-time onboarding fee
-  // Pro / Pro+ / Intelligence price IDs go here once those products exist:
-  // 'price_...': 'pro',
+  'price_1TUc0bLyOY8ujBqfMk6pQOey': 'pro',  // $20/mo DealFlow Pro (unlocks Client Portal)
+  // Pro+ / Intelligence price IDs go here when those products ship:
   // 'price_...': 'pro_plus',
   // 'price_...': 'intelligence',
 }

@@ -1,11 +1,11 @@
 // Single source of truth for paywall + subscription-management URLs.
 //
-// PLACEHOLDER_PRO_URL is a placeholder — swap it for the actual Stripe
-// Payment Link / Checkout URL once the Pro product is live in Stripe.
-// Imported by the Sidebar upgrade card, the Settings subscription card,
-// and the UpgradePrompt component so a single edit propagates everywhere.
+// PRO_CHECKOUT_URL is the live Stripe Payment Link for the $20/mo Pro
+// subscription. Imported by the Sidebar upgrade card, the Settings
+// subscription card, and the UpgradePrompt component, so swapping the
+// URL here propagates to every CTA in one edit.
 
-export const PLACEHOLDER_PRO_URL = 'https://buy.stripe.com/PLACEHOLDER_PRO_URL'
+export const PRO_CHECKOUT_URL = 'https://buy.stripe.com/6oUaEY1Gz5oj7n95VT3F603'
 
 // Stripe-hosted Customer Portal — once a user is on Pro they manage
 // payment method / cancel from there. Set this to the Customer Portal

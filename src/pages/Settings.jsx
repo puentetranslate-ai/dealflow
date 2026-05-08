@@ -16,7 +16,7 @@ import {
 import { useTrial } from '../context/TrialContext'
 import { useSubscription } from '../context/SubscriptionContext'
 import {
-  PLACEHOLDER_PRO_URL,
+  PRO_CHECKOUT_URL,
   STRIPE_CUSTOMER_PORTAL_URL,
   PRO_PRICE_LABEL,
 } from '../lib/upgradeLinks'
@@ -325,7 +325,7 @@ function UpgradeCallout() {
         Unlock the Client Portal — keep buyers and sellers in the loop without the back-and-forth texts.
       </p>
       <a
-        href={PLACEHOLDER_PRO_URL}
+        href={PRO_CHECKOUT_URL}
         target="_blank"
         rel="noopener noreferrer"
         className="mt-5 inline-flex items-center justify-center bg-gold hover:bg-gold-light text-navy font-semibold rounded-xl px-6 h-11 relative transition-colors"
@@ -405,7 +405,7 @@ function SubscriptionCard() {
       ) : (
         <>
           <a
-            href={PLACEHOLDER_PRO_URL}
+            href={PRO_CHECKOUT_URL}
             target="_blank"
             rel="noopener noreferrer"
             className="btn-primary w-full mt-5"

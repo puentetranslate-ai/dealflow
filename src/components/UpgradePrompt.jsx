@@ -1,6 +1,6 @@
 import { LockIcon, CheckIcon, ArrowRightIcon } from './Icon'
 import {
-  PLACEHOLDER_PRO_URL,
+  PRO_CHECKOUT_URL,
   PRO_PRICE_LABEL,
   PRO_PRICE_SUBLINE,
 } from '../lib/upgradeLinks'
@@ -76,7 +76,7 @@ export default function UpgradePrompt({
           {/* CTA */}
           <div className="mt-8 flex flex-col items-center">
             <a
-              href={PLACEHOLDER_PRO_URL}
+              href={PRO_CHECKOUT_URL}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center justify-center gap-2 bg-gold hover:bg-gold-light text-navy font-semibold rounded-xl px-7 h-12 text-[15px] transition-colors shadow-[0_4px_14px_rgba(201,168,76,0.35)]"
