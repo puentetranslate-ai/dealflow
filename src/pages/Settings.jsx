@@ -14,6 +14,12 @@ import {
   isPushSupported, getNotificationPermission, subscribeToPush, unsubscribeFromPush,
 } from '../lib/pushNotifications'
 import { useTrial } from '../context/TrialContext'
+import { useSubscription } from '../context/SubscriptionContext'
+import {
+  PLACEHOLDER_PRO_URL,
+  STRIPE_CUSTOMER_PORTAL_URL,
+  PRO_PRICE_LABEL,
+} from '../lib/upgradeLinks'
 
 export default function Settings() {
   const { user, signOut, updatePassword } = useAuth()
@@ -238,23 +244,9 @@ export default function Settings() {
           {/* Notifications */}
           <NotificationsCard userId={user.id} />
 
-          {/* Upgrade card */}
-          <div className="rounded-2xl bg-navy text-white p-6 md:p-7 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-48 h-48 bg-gold/10 rounded-full -translate-y-16 translate-x-12 pointer-events-none" />
-            <div className="badge-gold relative">Pro</div>
-            <h3 className="font-display text-xl md:text-2xl font-bold mt-3 relative leading-tight">
-              Upgrade to <span className="text-gold">Pro</span>
-            </h3>
-            <p className="text-white/70 text-sm mt-2 relative max-w-md">
-              Unlock document storage, e-signatures, team workspaces, and AI-powered transaction summaries.
-            </p>
-            <button
-              onClick={() => alert('Upgrade flow coming soon.')}
-              className="mt-5 inline-flex items-center justify-center bg-gold hover:bg-gold-light text-navy font-semibold rounded-xl px-6 h-11 relative transition-colors"
-            >
-              Upgrade Now
-            </button>
-          </div>
+          {/* Upgrade card — hidden once the user is on Pro or higher */}
+          <UpgradeCallout />
+
 
           {/* Help & Support */}
           <div className="card p-5 md:p-6">
@@ -315,20 +307,66 @@ function SectionHeader({ title, subtitle }) {
   )
 }
 
+// ─────────────────────────── Upgrade callout ───────────────────────────
+// Marketing card sitting under the Subscription card. Disappears entirely
+// once the user is on Pro or higher — at that point they don't need to
+// see another "Upgrade Now" pitch.
+function UpgradeCallout() {
+  const sub = useSubscription()
+  if (sub.isProOrHigher()) return null
+  return (
+    <div className="rounded-2xl bg-navy text-white p-6 md:p-7 relative overflow-hidden">
+      <div className="absolute top-0 right-0 w-48 h-48 bg-gold/10 rounded-full -translate-y-16 translate-x-12 pointer-events-none" />
+      <div className="badge-gold relative">Pro</div>
+      <h3 className="font-display text-xl md:text-2xl font-bold mt-3 relative leading-tight">
+        Upgrade to <span className="text-gold">Pro</span>
+      </h3>
+      <p className="text-white/70 text-sm mt-2 relative max-w-md">
+        Unlock the Client Portal — keep buyers and sellers in the loop without the back-and-forth texts.
+      </p>
+      <a
+        href={PLACEHOLDER_PRO_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-5 inline-flex items-center justify-center bg-gold hover:bg-gold-light text-navy font-semibold rounded-xl px-6 h-11 relative transition-colors"
+      >
+        Upgrade — {PRO_PRICE_LABEL}
+      </a>
+    </div>
+  )
+}
+
 // ─────────────────────────── Subscription card ───────────────────────────
-const STRIPE_ACTIVATE_URL = 'https://buy.stripe.com/cNiaEYgBtaIDePBac93F602'
+// Plan label + price shown to the user. Keep in sync with the actual
+// Stripe products as new tiers ship. The 'beta' fallback covers any
+// trial / pre-Pro user — they all see the "Free Trial" copy and the
+// Upgrade-to-Pro CTA.
+const TIER_INFO = {
+  beta:         { label: 'Free Trial', price: '' },
+  pro:          { label: 'Pro',          price: '$20/month' },
+  pro_plus:     { label: 'Pro+',         price: '$40/month' },
+  intelligence: { label: 'Intelligence', price: '$60/month' },
+}
 
 function SubscriptionCard() {
-  const { loading, daysRemaining, isExpired } = useTrial()
+  const trial = useTrial()
+  const sub = useSubscription()
+  const isPaid = sub.isProOrHigher() || sub.isProPlusOrHigher() || sub.isIntelligence()
 
-  let planLabel = 'Free Trial'
-  let planSub = ''
-  if (loading) {
-    planSub = 'Loading…'
-  } else if (isExpired) {
-    planSub = 'Trial expired — activate to restore access.'
-  } else if (daysRemaining != null) {
-    planSub = `${daysRemaining} ${daysRemaining === 1 ? 'day' : 'days'} remaining`
+  // Pick the plan label from subscription_tier, falling back to 'beta'
+  // for trial users (or any unknown value) so the card never blanks.
+  const info = TIER_INFO[sub.tier] || TIER_INFO.beta
+  const planLabel = info.label
+  const priceLabel = info.price
+
+  // Subline only matters for the trial path — paid users see their price.
+  let trialSub = ''
+  if (trial.loading) {
+    trialSub = 'Loading…'
+  } else if (trial.isExpired) {
+    trialSub = 'Trial expired — upgrade to restore access.'
+  } else if (trial.daysRemaining != null) {
+    trialSub = `${trial.daysRemaining} ${trial.daysRemaining === 1 ? 'day' : 'days'} remaining`
   }
 
   return (
@@ -338,31 +376,47 @@ function SubscriptionCard() {
       <div className="mt-4 flex items-center justify-between gap-3 py-2 border-b border-navy/[0.05]">
         <div>
           <p className="text-navy font-semibold text-sm">{planLabel}</p>
-          <p className="text-muted text-xs mt-0.5">{planSub}</p>
+          <p className="text-muted text-xs mt-0.5">
+            {isPaid ? (priceLabel || 'Active subscription') : trialSub}
+          </p>
         </div>
-        {!isExpired && daysRemaining != null && (
-          <span className={`badge-pill ${
-            daysRemaining <= 5 ? 'bg-gold/15 text-gold-dark' : 'bg-navy/[0.04] text-navy/70'
-          }`}>
-            {daysRemaining <= 5 ? 'Action needed' : 'Active'}
-          </span>
-        )}
-        {isExpired && (
+        {isPaid ? (
+          <span className="badge-pill bg-emerald-100 text-emerald-700">Active</span>
+        ) : trial.isExpired ? (
           <span className="badge-pill bg-red-100 text-red-700">Expired</span>
-        )}
+        ) : trial.daysRemaining != null ? (
+          <span className={`badge-pill ${
+            trial.daysRemaining <= 5 ? 'bg-gold/15 text-gold-dark' : 'bg-navy/[0.04] text-navy/70'
+          }`}>
+            {trial.daysRemaining <= 5 ? 'Action needed' : 'Trial'}
+          </span>
+        ) : null}
       </div>
 
-      <a
-        href={STRIPE_ACTIVATE_URL}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="btn-primary w-full mt-5"
-      >
-        Activate Subscription
-      </a>
-      <p className="text-center text-muted text-xs mt-3">
-        $30 onboarding fee + $15/month after · Cancel anytime
-      </p>
+      {isPaid ? (
+        <a
+          href={STRIPE_CUSTOMER_PORTAL_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn-outline w-full mt-5"
+        >
+          Manage Subscription
+        </a>
+      ) : (
+        <>
+          <a
+            href={PLACEHOLDER_PRO_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-primary w-full mt-5"
+          >
+            Upgrade to Pro — {PRO_PRICE_LABEL}
+          </a>
+          <p className="text-center text-muted text-xs mt-3">
+            Unlock Client Portal &middot; 30-day free trial &middot; Cancel anytime
+          </p>
+        </>
+      )}
     </div>
   )
 }

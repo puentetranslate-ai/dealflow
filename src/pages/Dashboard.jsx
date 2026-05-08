@@ -74,6 +74,27 @@ export default function Dashboard() {
 
   const clearPhaseFilter = () => setSearchParams({})
 
+  // Post-upgrade celebration toast — when Stripe redirects back to
+  // /dashboard?upgraded=pro after a successful Pro checkout, show a
+  // one-time confirmation, then strip the query param so a refresh
+  // doesn't re-trigger it.
+  const [showUpgradeToast, setShowUpgradeToast] = useState(false)
+  useEffect(() => {
+    if (searchParams.get('upgraded') !== 'pro') return
+    setShowUpgradeToast(true)
+    // Remove the query param without leaving a history entry — the
+    // Back button shouldn't take the user to a "?upgraded=pro" URL
+    // they've already dismissed.
+    const next = new URLSearchParams(searchParams)
+    next.delete('upgraded')
+    setSearchParams(next, { replace: true })
+    const dismissTimer = setTimeout(() => setShowUpgradeToast(false), 5000)
+    return () => clearTimeout(dismissTimer)
+    // We only want this to fire on initial mount with the param present,
+    // not on every searchParams change (that would loop forever).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const fetchData = useCallback(async () => {
     try {
       setLoading(true)
@@ -213,6 +234,34 @@ export default function Dashboard() {
   return (
     <AppLayout>
       <WelcomeModal userId={user.id} firstName={firstName} />
+
+      {/* ── Post-upgrade celebration toast ── */}
+      {showUpgradeToast && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed top-4 left-1/2 -translate-x-1/2 z-[80] max-w-[92vw] md:max-w-md
+                     bg-navy text-white rounded-2xl shadow-pop border border-gold/30
+                     px-5 py-4 flex items-start gap-3 animate-fade-in"
+        >
+          <span className="text-2xl leading-none mt-0.5" aria-hidden="true">🎉</span>
+          <div className="flex-1 min-w-0">
+            <p className="font-display text-sm md:text-base font-bold">
+              Welcome to DealFlow <span className="text-gold">Pro!</span>
+            </p>
+            <p className="text-white/70 text-xs md:text-sm mt-0.5">
+              Client Portal is now unlocked.
+            </p>
+          </div>
+          <button
+            onClick={() => setShowUpgradeToast(false)}
+            aria-label="Dismiss"
+            className="text-white/40 hover:text-white shrink-0 -mr-1 -mt-1 p-1"
+          >
+            <XIcon className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* ── Mobile Header ── */}
       <MobileHeader showBell title={null}>

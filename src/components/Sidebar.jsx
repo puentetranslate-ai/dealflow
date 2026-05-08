@@ -6,6 +6,8 @@ import {
   HomeIcon, UsersIcon, FunnelIcon, BarChartIcon, SettingsIcon, CalendarIcon, LogoutIcon, NetworkIcon, LockIcon,
 } from './Icon'
 import { isAdmin } from '../lib/admin'
+import { useSubscription } from '../context/SubscriptionContext'
+import { PLACEHOLDER_PRO_URL, PRO_PRICE_LABEL } from '../lib/upgradeLinks'
 
 const links = [
   { path: '/dashboard', label: 'Dashboard', Icon: HomeIcon },
@@ -22,6 +24,8 @@ export default function Sidebar() {
   const { user, signOut } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  const subscription = useSubscription()
+  const showUpgradeCard = !subscription.isProOrHigher()
   const [fullName, setFullName] = useState('')
   const [activeLeadsCount, setActiveLeadsCount] = useState(0)
 
@@ -108,24 +112,28 @@ export default function Sidebar() {
         )}
       </nav>
 
-      {/* Upgrade card */}
-      <div className="px-4 pt-3">
-        <div className="rounded-2xl bg-navy-light border border-gold/20 p-4">
-          <div className="badge-gold mb-2">Pro</div>
-          <h3 className="font-display text-base font-bold text-white leading-tight">
-            Upgrade to Pro
-          </h3>
-          <p className="text-white/60 text-xs mt-1 leading-snug">
-            Unlock document storage, e-signatures, and team workspaces.
-          </p>
-          <button
-            onClick={() => alert('Upgrade flow coming soon.')}
-            className="mt-3 w-full bg-gold text-navy font-semibold text-sm rounded-lg py-2 hover:bg-gold-light transition-colors"
-          >
-            Upgrade
-          </button>
+      {/* Upgrade card — hidden once the user is on Pro or higher */}
+      {showUpgradeCard && (
+        <div className="px-4 pt-3">
+          <div className="rounded-2xl bg-navy-light border border-gold/20 p-4">
+            <div className="badge-gold mb-2">Pro</div>
+            <h3 className="font-display text-base font-bold text-white leading-tight">
+              Unlock Client Portal
+            </h3>
+            <p className="text-white/60 text-xs mt-1 leading-snug">
+              {PRO_PRICE_LABEL} — give buyers and sellers a private milestone tracker that updates in real time.
+            </p>
+            <a
+              href={PLACEHOLDER_PRO_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-3 w-full bg-gold text-navy font-semibold text-sm rounded-lg py-2 hover:bg-gold-light transition-colors text-center inline-block"
+            >
+              Upgrade to Pro
+            </a>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Agent footer */}
       <div className="px-4 py-4 mt-3 border-t border-white/[0.06]">

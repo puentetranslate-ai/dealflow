@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { TrialProvider } from './context/TrialContext'
+import { SubscriptionProvider } from './context/SubscriptionContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import Landing from './pages/Landing'
 import ClientPortal from './pages/ClientPortal'
@@ -27,6 +28,7 @@ export default function App() {
       <NotificationNavigator />
       <AuthProvider>
         <TrialProvider>
+        <SubscriptionProvider>
         <Routes>
           {/* Public marketing + auth routes */}
           <Route path="/" element={<Landing />} />
@@ -58,6 +60,7 @@ export default function App() {
           {/* Unknown URLs land on the landing page */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </SubscriptionProvider>
         </TrialProvider>
       </AuthProvider>
     </BrowserRouter>

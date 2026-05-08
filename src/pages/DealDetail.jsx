@@ -20,9 +20,11 @@ import DocumentsTab from '../components/DocumentsTab'
 import {
   ArrowLeftIcon, ShareIcon, PhoneIcon, MailIcon, MessageIcon, UsersIcon, CheckIcon,
   CalendarIcon, PhaseDotIcons, ArrowRightIcon, HouseIcon, FileIcon, DownloadIcon,
-  PencilIcon, ChevronUpIcon, ChevronDownIcon, TrashIcon, PlusIcon, XIcon,
+  PencilIcon, ChevronUpIcon, ChevronDownIcon, TrashIcon, PlusIcon, XIcon, LockIcon,
 } from '../components/Icon'
 import { exportDealPdf } from '../lib/pdfExport'
+import { useSubscription } from '../context/SubscriptionContext'
+import UpgradePrompt from '../components/UpgradePrompt'
 
 const TABS = [
   { id: 'overview', label: 'Overview' },
@@ -36,6 +38,11 @@ export default function DealDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
+  const subscription = useSubscription()
+  // Client Portal is the first paid feature gated by subscription tier.
+  // Pro / Pro+ / Intelligence all get access; trial users see the
+  // upgrade prompt instead of the portal UI when they tap the Portal tab.
+  const portalUnlocked = subscription.isProOrHigher()
   const [deal, setDeal] = useState(null)
   const [tab, setTab] = useState('overview')
   const [loading, setLoading] = useState(true)
@@ -387,8 +394,13 @@ export default function DealDetail() {
                 tab === t.id ? 'bg-white text-navy' : 'text-white/60'
               }`}
             >
-              {t.label}
-              {t.id === 'portal' && portalUnreadCount > 0 && (
+              <span className="inline-flex items-center justify-center gap-1">
+                {t.label}
+                {t.id === 'portal' && !portalUnlocked && (
+                  <LockIcon className="w-3 h-3 opacity-70" />
+                )}
+              </span>
+              {t.id === 'portal' && portalUnlocked && portalUnreadCount > 0 && (
                 <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-gold" />
               )}
             </button>
@@ -451,7 +463,10 @@ export default function DealDetail() {
             }`}
           >
             {t.label}
-            {t.id === 'portal' && portalUnreadCount > 0 && (
+            {t.id === 'portal' && !portalUnlocked && (
+              <LockIcon className="w-3.5 h-3.5 text-gold/80" />
+            )}
+            {t.id === 'portal' && portalUnlocked && portalUnreadCount > 0 && (
               <span className="bg-gold text-navy text-[10px] font-bold rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center">
                 {portalUnreadCount}
               </span>
@@ -509,7 +524,13 @@ export default function DealDetail() {
           )}
 
           {tab === 'portal' && (
-            <PortalTab deal={deal} onUnreadChange={setPortalUnreadCount} />
+            portalUnlocked ? (
+              <PortalTab deal={deal} onUnreadChange={setPortalUnreadCount} />
+            ) : (
+              <div className="py-6 md:py-10">
+                <UpgradePrompt feature="Client Portal" />
+              </div>
+            )
           )}
 
           {tab === 'documents' && (
