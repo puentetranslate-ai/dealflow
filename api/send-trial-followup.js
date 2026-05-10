@@ -231,6 +231,11 @@ If anything's been confusing, just reply to this email. I read every one and ans
 — Jimmy
 DealFlow
 https://dealflownow.net
+
+---
+DealFlow · 15238 E Pond Woods Dr · Tampa, FL 33618
+You're receiving this because you started a DealFlow free trial.
+To stop these emails, reply with UNSUBSCRIBE.
 `,
     html: emailShell(`
       <h2 style="color:#0c1e35;font-family:Georgia,'Playfair Display',serif;font-size:24px;margin:0 0 16px;font-weight:700;letter-spacing:-0.3px;">
@@ -280,6 +285,11 @@ Want a 15-minute walkthrough to get the most out of your remaining time? Just re
 — Jimmy
 DealFlow
 https://dealflownow.net
+
+---
+DealFlow · 15238 E Pond Woods Dr · Tampa, FL 33618
+You're receiving this because you started a DealFlow free trial.
+To stop these emails, reply with UNSUBSCRIBE.
 `,
     html: emailShell(`
       <h2 style="color:#0c1e35;font-family:Georgia,'Playfair Display',serif;font-size:24px;margin:0 0 16px;font-weight:700;letter-spacing:-0.3px;">
@@ -337,6 +347,11 @@ If you're on the fence and have questions about how it'd fit your workflow long-
 — Jimmy
 DealFlow
 https://dealflownow.net
+
+---
+DealFlow · 15238 E Pond Woods Dr · Tampa, FL 33618
+You're receiving this because you started a DealFlow free trial.
+To stop these emails, reply with UNSUBSCRIBE.
 `,
     html: emailShell(`
       <div style="text-align:center;margin:0 0 8px;">
@@ -387,6 +402,11 @@ https://dealflownow.net
 }
 
 // ── Shared HTML chrome (matches send-welcome-email.js) ──────────
+// Footer includes the CAN-SPAM § 5 essentials: (a) valid physical
+// postal address, (b) sender identity, (c) opt-out instruction.
+// We use a reply-based opt-out because we don't yet host a one-click
+// unsubscribe endpoint — replying "UNSUBSCRIBE" gets the message into
+// our Resend inbox where we can mark the address suppressed.
 function emailShell(inner) {
   return `<!DOCTYPE html>
 <html>
@@ -401,10 +421,14 @@ function emailShell(inner) {
     <div style="padding:40px;">
       ${inner}
     </div>
-    <div style="background:#0c1e35;padding:18px 40px;text-align:center;">
-      <p style="color:#8a9ab5;font-size:12px;margin:0;">
-        &copy; 2026 DealFlow &middot;
+    <div style="background:#0c1e35;padding:24px 40px;text-align:center;">
+      <p style="color:#8a9ab5;font-size:11px;line-height:1.7;margin:0;">
+        DealFlow &middot;
         <a href="https://dealflownow.net" style="color:#c9a84c;text-decoration:none;">dealflownow.net</a>
+        <br/>
+        15238 E Pond Woods Dr &middot; Tampa, FL 33618
+        <br/>
+        <span style="opacity:0.75;">You're receiving this because you started a DealFlow free trial. To stop receiving these emails, reply with "UNSUBSCRIBE" and we'll remove you within 24 hours.</span>
       </p>
     </div>
   </div>

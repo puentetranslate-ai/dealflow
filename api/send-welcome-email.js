@@ -195,11 +195,15 @@ function renderEmail(firstName) {
       </p>
     </div>
 
-    <!-- Footer -->
-    <div style="background:#0c1e35;padding:20px 40px;text-align:center;">
-      <p style="color:#8a9ab5;font-size:12px;margin:0;">
-        &copy; 2026 DealFlow &middot;
+    <!-- Footer (CAN-SPAM compliant — postal address + sender identity) -->
+    <div style="background:#0c1e35;padding:24px 40px;text-align:center;">
+      <p style="color:#8a9ab5;font-size:11px;line-height:1.65;margin:0;">
+        DealFlow &middot;
         <a href="https://dealflownow.net" style="color:#c9a84c;text-decoration:none;">dealflownow.net</a>
+        <br/>
+        15238 E Pond Woods Dr &middot; Tampa, FL 33618
+        <br/>
+        <span style="color:#8a9ab5;opacity:0.7;">&copy; 2026 DealFlow. You're receiving this because you signed up for a DealFlow account.</span>
       </p>
     </div>
 

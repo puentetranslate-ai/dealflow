@@ -152,9 +152,13 @@ function renderEmail({
     ${agentPhone ? `<p><strong>Phone:</strong> ${escapeHtml(agentPhone)}</p>` : ''}
     ${agentEmail ? `<p><strong>Email:</strong> ${escapeHtml(agentEmail)}</p>` : ''}
   </div>
-  <p style="color: #8a9ab5; font-size: 12px; margin-top: 20px;">
-    Sent via DealFlow · <a href="https://dealflownow.net">dealflownow.net</a>
-  </p>
+  <div style="border-top: 1px solid #e2d9c8; margin-top: 24px; padding-top: 16px; text-align: center;">
+    <p style="color: #8a9ab5; font-size: 11px; line-height: 1.6; margin: 0;">
+      Sent via DealFlow &middot; <a href="https://dealflownow.net" style="color:#c9a84c;text-decoration:none;">dealflownow.net</a><br/>
+      15238 E Pond Woods Dr &middot; Tampa, FL 33618<br/>
+      <span style="opacity:0.8;">You're receiving this because ${agentName ? escapeHtml(agentName) : 'a DealFlow user'} added you to their agent network. Reply to opt out.</span>
+    </p>
+  </div>
 </body>
 </html>`
 }

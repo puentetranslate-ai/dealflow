@@ -712,9 +712,19 @@ function Footer() {
           { label: 'Free Trial', to: '/signup' },
         ]} />
 
-        <FooterCol title="Contact" items={[
-          { label: 'jimmy@puente-translations.com', href: 'mailto:jimmy@puente-translations.com' },
-        ]} />
+        <FooterCol
+          title="Contact"
+          items={[
+            { label: 'jimmy@puente-translations.com', href: 'mailto:jimmy@puente-translations.com' },
+          ]}
+          footer={
+            <address className="not-italic text-white/50 text-xs leading-relaxed mt-3 block">
+              DealFlow<br />
+              15238 E Pond Woods Dr<br />
+              Tampa, FL 33618
+            </address>
+          }
+        />
       </div>
 
       <div className="border-t border-white/[0.06] py-6 text-center text-white/40 text-xs">
@@ -727,7 +737,7 @@ function Footer() {
   )
 }
 
-function FooterCol({ title, items }) {
+function FooterCol({ title, items, footer }) {
   return (
     <div>
       <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-gold">{title}</p>
@@ -751,6 +761,7 @@ function FooterCol({ title, items }) {
           </li>
         ))}
       </ul>
+      {footer}
     </div>
   )
 }
