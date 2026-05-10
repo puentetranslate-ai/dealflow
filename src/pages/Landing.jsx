@@ -719,7 +719,8 @@ function Footer() {
           ]}
           footer={
             <address className="not-italic text-white/50 text-xs leading-relaxed mt-3 block">
-              DealFlow<br />
+              DealFlow is operated by<br />
+              <span className="text-white/70">Puente Translations LLC</span><br />
               15238 E Pond Woods Dr<br />
               Tampa, FL 33618
             </address>

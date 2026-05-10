@@ -154,8 +154,8 @@ function renderEmail({
   </div>
   <div style="border-top: 1px solid #e2d9c8; margin-top: 24px; padding-top: 16px; text-align: center;">
     <p style="color: #8a9ab5; font-size: 11px; line-height: 1.6; margin: 0;">
-      Sent via DealFlow &middot; <a href="https://dealflownow.net" style="color:#c9a84c;text-decoration:none;">dealflownow.net</a><br/>
-      15238 E Pond Woods Dr &middot; Tampa, FL 33618<br/>
+      DealFlow is operated by Puente Translations LLC<br/>
+      15238 E Pond Woods Dr &middot; Tampa, FL 33618 &middot; <a href="https://dealflownow.net" style="color:#c9a84c;text-decoration:none;">dealflownow.net</a><br/>
       <span style="opacity:0.8;">You're receiving this because ${agentName ? escapeHtml(agentName) : 'a DealFlow user'} added you to their agent network. Reply to opt out.</span>
     </p>
   </div>
