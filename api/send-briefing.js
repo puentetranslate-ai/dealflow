@@ -18,23 +18,47 @@
 // /api/* on Vercel is publicly reachable by default.
 //
 // Request body (JSON):
-//   { to, subject, html, text?, pdfUrl? }
-//     - to:      string | string[]  recipient address(es). Capped at 50 per request.
-//     - subject: string
-//     - html:    string             full HTML email body
-//     - text:    string (optional)  plain-text alternative — recommended for deliverability
-//     - pdfUrl:  string (optional)  reserved for future attachment use; not currently embedded
+//   { to, subject, html, text?, pdfUrl?, unsubscribeUserId? }
+//     - to:                 string | string[]  recipient address(es), capped at 50.
+//     - subject:            string
+//     - html:               string             full HTML email body
+//     - text:               string (optional)  plain-text alternative — recommended.
+//     - pdfUrl:             string (optional)  reserved for future attachment use.
+//     - unsubscribeUserId:  string (optional)  Supabase auth.users.id (UUID) of the
+//                                              briefing recipient. When provided:
+//                                                * we mint an HMAC-signed
+//                                                  /api/briefing-unsubscribe URL,
+//                                                * substitute {{UNSUBSCRIBE_URL}}
+//                                                  placeholders in html and text,
+//                                                * add List-Unsubscribe and
+//                                                  List-Unsubscribe-Post headers
+//                                                  (RFC 8058 — Gmail / Outlook
+//                                                  show a native unsubscribe chip
+//                                                  next to the subject line),
+//                                                * pre-check the profile's
+//                                                  briefing_unsubscribed_at flag and
+//                                                  200-skip if the user previously
+//                                                  opted out.
+//                                              Omit for unsubscribe-less sends.
 //
-// Response: { success: boolean, id?: string, error?: string }
+// Response: { success: boolean, id?: string, skipped?: boolean, reason?: string, error?: string }
 
 import { timingSafeEqual } from 'node:crypto'
+import { buildUnsubscribeUrl } from './unsubscribe.js'
 
 const RESEND_URL = 'https://api.resend.com/emails'
+const SUPABASE_URL = 'https://xmylqfkwigpgrkpfzvfq.supabase.co'
+const PUBLIC_ORIGIN = 'https://dealflownow.net'
 const DEFAULT_FROM = 'DealFlow Operations <noreply@mail.dealflownow.net>'
 const MAX_RECIPIENTS = 50
 // Liberal email shape check — rejects obvious garbage without trying to
 // reimplement RFC 5322. Resend handles the strict validation downstream.
 const EMAIL_RE = /^\S+@\S+\.\S+$/
+// Placeholder string the caller can drop into html/text bodies. We
+// substitute it server-side with the recipient-specific signed URL so
+// the Cowork task doesn't need access to BRIEFING_TOKEN or any crypto
+// to produce a working unsubscribe link.
+const UNSUBSCRIBE_PLACEHOLDER = '{{UNSUBSCRIBE_URL}}'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -85,7 +109,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ success: false, error: 'invalid-json' })
   }
 
-  const { to, subject, html, text } = body || {}
+  const { to, subject, html, text, unsubscribeUserId } = body || {}
   if (!to || (typeof to !== 'string' && !Array.isArray(to))) {
     return res.status(400).json({
       success: false,
@@ -97,6 +121,14 @@ export default async function handler(req, res) {
   }
   if (!html || typeof html !== 'string') {
     return res.status(400).json({ success: false, error: 'html required' })
+  }
+  // unsubscribeUserId is optional but if provided must be a string —
+  // anything else is a caller bug we'd rather catch than silently ignore.
+  if (unsubscribeUserId != null && typeof unsubscribeUserId !== 'string') {
+    return res.status(400).json({
+      success: false,
+      error: 'unsubscribeUserId must be a string (UUID) when provided',
+    })
   }
 
   const recipients = Array.isArray(to) ? to : [to]
@@ -123,6 +155,76 @@ export default async function handler(req, res) {
     })
   }
 
+  // ─── Briefing-specific opt-out handling ───────────────────────────
+  // If unsubscribeUserId was provided we:
+  //   1. Look up briefing_unsubscribed_at on that profile (service-role).
+  //      If non-null, the user opted out — return 200 with skipped=true.
+  //   2. Mint a per-recipient signed unsubscribe URL.
+  //   3. Substitute {{UNSUBSCRIBE_URL}} placeholders in both html/text.
+  //   4. Attach List-Unsubscribe + List-Unsubscribe-Post headers so
+  //      Gmail / Outlook show the native unsubscribe chip.
+  //
+  // None of this fires when unsubscribeUserId is absent — the endpoint
+  // stays fully backward-compatible for callers that don't opt in.
+  let finalHtml = html
+  let finalText = text
+  let resendHeaders = null
+  let unsubscribeUrl = null
+
+  if (unsubscribeUserId) {
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (!serviceKey) {
+      console.error('[send-briefing] unsubscribeUserId provided but SUPABASE_SERVICE_ROLE_KEY missing')
+      return res.status(503).json({ success: false, error: 'service-unavailable' })
+    }
+    // 1. Pre-send opt-out check.
+    try {
+      const lookup = await fetch(
+        `${SUPABASE_URL}/rest/v1/profiles?id=eq.${encodeURIComponent(unsubscribeUserId)}&select=briefing_unsubscribed_at`,
+        { headers: { Authorization: `Bearer ${serviceKey}`, apikey: serviceKey } }
+      )
+      if (lookup.ok) {
+        const rows = await lookup.json()
+        const flag = Array.isArray(rows) && rows[0]?.briefing_unsubscribed_at
+        if (flag) {
+          console.log('[send-briefing] skip — user unsubscribed', unsubscribeUserId)
+          return res.status(200).json({
+            success: true,
+            skipped: true,
+            reason: 'user-unsubscribed-from-briefing',
+          })
+        }
+      } else {
+        // Profile lookup failed but we still have a userId — log loudly
+        // and proceed without the skip check. Letting the briefing go
+        // through with a working unsubscribe link is preferable to
+        // dropping the email entirely on a transient DB failure.
+        const detail = await lookup.text().catch(() => '')
+        console.error('[send-briefing] profile lookup failed; proceeding without skip-check', lookup.status, detail)
+      }
+    } catch (e) {
+      console.error('[send-briefing] profile lookup exception; proceeding', e)
+    }
+
+    // 2 + 3. Mint the URL and substitute placeholders.
+    unsubscribeUrl = buildUnsubscribeUrl(
+      unsubscribeUserId,
+      expectedToken,
+      PUBLIC_ORIGIN,
+      '/api/briefing-unsubscribe'
+    )
+    finalHtml = html.split(UNSUBSCRIBE_PLACEHOLDER).join(unsubscribeUrl)
+    if (typeof finalText === 'string') {
+      finalText = finalText.split(UNSUBSCRIBE_PLACEHOLDER).join(unsubscribeUrl)
+    }
+
+    // 4. RFC 8058 one-click headers for Gmail's native chip.
+    resendHeaders = {
+      'List-Unsubscribe': `<${unsubscribeUrl}>, <mailto:unsubscribe@dealflownow.net?subject=Unsubscribe%20from%20briefing>`,
+      'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+    }
+  }
+
   // ─── Send via Resend ───────────────────────────────────────────────
   try {
     const resp = await fetch(RESEND_URL, {
@@ -135,8 +237,9 @@ export default async function handler(req, res) {
         from,
         to: recipients,
         subject,
-        html,
-        ...(text ? { text } : {}),
+        html: finalHtml,
+        ...(finalText ? { text: finalText } : {}),
+        ...(resendHeaders ? { headers: resendHeaders } : {}),
       }),
     })
 
@@ -160,6 +263,7 @@ export default async function handler(req, res) {
       id: data?.id,
       recipients: recipients.length,
       subject,
+      unsubscribeWired: Boolean(unsubscribeUrl),
     })
     return res.status(200).json({ success: true, id: data?.id })
   } catch (e) {

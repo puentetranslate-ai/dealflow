@@ -51,9 +51,29 @@ export function buildUnsubscribeToken(userId, secret) {
   return `${userId}.${sig}`
 }
 
-export function buildUnsubscribeUrl(userId, secret, origin = 'https://dealflownow.net') {
+export function buildUnsubscribeUrl(
+  userId,
+  secret,
+  origin = 'https://dealflownow.net',
+  path = '/api/unsubscribe'
+) {
   const token = buildUnsubscribeToken(userId, secret)
-  return `${origin}/api/unsubscribe?t=${encodeURIComponent(token)}`
+  return `${origin}${path}?t=${encodeURIComponent(token)}`
+}
+
+// Exposed so sibling endpoints (api/briefing-unsubscribe.js) can reuse
+// the same HMAC-verification logic without duplicating it. Returns the
+// userId encoded in the token, or null if the token is missing,
+// malformed, or fails the signature check.
+export function verifyUnsubscribeToken(token, secret) {
+  return verifyToken(token, secret)
+}
+
+// Same idea — exposed for reuse. `columnName` lets callers point this
+// at briefing_unsubscribed_at, marketing_emails_unsubscribed_at, or
+// any future opt-out column without duplicating the PATCH plumbing.
+export async function setUnsubscribedFlag(serviceKey, userId, columnName) {
+  return unsubscribeUser(serviceKey, userId, columnName)
 }
 
 export default async function handler(req, res) {
@@ -158,7 +178,19 @@ async function detectOneClickPost(req) {
   } catch { return false }
 }
 
-async function unsubscribeUser(serviceKey, userId) {
+// Writes the current timestamp to whichever opt-out column the caller
+// specifies. Defaults to marketing_emails_unsubscribed_at to preserve
+// behavior for the original endpoint; briefing-unsubscribe overrides.
+async function unsubscribeUser(serviceKey, userId, columnName = 'marketing_emails_unsubscribed_at') {
+  // Allowlist the column name to prevent any chance of SQL/JSON-key
+  // injection if a future caller passes user input through.
+  const allowed = new Set([
+    'marketing_emails_unsubscribed_at',
+    'briefing_unsubscribed_at',
+  ])
+  if (!allowed.has(columnName)) {
+    return { ok: false, error: `disallowed-column:${columnName}` }
+  }
   try {
     const r = await fetch(
       `${SUPABASE_URL}/rest/v1/profiles?id=eq.${encodeURIComponent(userId)}`,
@@ -171,7 +203,7 @@ async function unsubscribeUser(serviceKey, userId) {
           Prefer: 'return=minimal',
         },
         body: JSON.stringify({
-          marketing_emails_unsubscribed_at: new Date().toISOString(),
+          [columnName]: new Date().toISOString(),
         }),
       }
     )
@@ -179,7 +211,7 @@ async function unsubscribeUser(serviceKey, userId) {
       const detail = await r.text().catch(() => '')
       return { ok: false, error: `${r.status} ${detail}` }
     }
-    console.log('[unsubscribe] success', userId)
+    console.log('[unsubscribe] success', userId, columnName)
     return { ok: true }
   } catch (e) {
     return { ok: false, error: e.message }

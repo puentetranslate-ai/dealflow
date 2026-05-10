@@ -51,6 +51,14 @@ ALTER TABLE public.profiles
 ALTER TABLE public.profiles
   ADD COLUMN IF NOT EXISTS marketing_emails_unsubscribed_at timestamptz;
 
+-- Separate opt-out for the weekly briefing email (sent every Friday by
+-- the Cowork-driven scheduled task). Independent of the marketing
+-- column above so a recipient can opt out of one without losing the
+-- other. Set by api/briefing-unsubscribe.js — checked by
+-- api/send-briefing.js before forwarding to Resend.
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS briefing_unsubscribed_at timestamptz;
+
 -- Stripe linkage. stripe_customer_id is captured on first checkout.session
 -- and used as the primary lookup key for subsequent subscription/invoice
 -- webhooks (avoids the much slower email match path).
