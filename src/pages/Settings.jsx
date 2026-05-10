@@ -278,6 +278,9 @@ export default function Settings() {
             </a>
           </div>
 
+          {/* Email preferences — intentionally subdued, sits before Sign Out */}
+          <EmailPreferencesCard userId={user.id} />
+
           {/* Sign Out */}
           <div className="card p-2">
             <button
@@ -539,6 +542,91 @@ function NotificationsCard({ userId }) {
             </div>
           )}
         </>
+      )}
+    </div>
+  )
+}
+
+// ─────────────────────────── Email preferences ───────────────────────────
+// Sits below Help & Support, above Sign Out. Intentionally subdued — most
+// users won't ever look at it, and that's the right outcome. Updates the
+// profiles.marketing_emails_unsubscribed_at column directly via Supabase
+// (RLS already grants UPDATE on the user's own row); no API round-trip.
+function EmailPreferencesCard({ userId }) {
+  const [unsubscribedAt, setUnsubscribedAt] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [msg, setMsg] = useState(null)
+
+  useEffect(() => {
+    let cancelled = false
+    supabase
+      .from('profiles')
+      .select('marketing_emails_unsubscribed_at')
+      .eq('id', userId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (cancelled) return
+        setUnsubscribedAt(data?.marketing_emails_unsubscribed_at || null)
+        setLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [userId])
+
+  const isUnsubscribed = Boolean(unsubscribedAt)
+
+  const toggle = async () => {
+    setSaving(true)
+    setMsg(null)
+    const nextValue = isUnsubscribed ? null : new Date().toISOString()
+    const { error } = await supabase
+      .from('profiles')
+      .update({ marketing_emails_unsubscribed_at: nextValue })
+      .eq('id', userId)
+    setSaving(false)
+    if (error) {
+      setMsg({ type: 'error', text: 'Could not update preferences. Try again in a moment.' })
+      return
+    }
+    setUnsubscribedAt(nextValue)
+    setMsg({
+      type: 'ok',
+      text: nextValue
+        ? "Unsubscribed. You won't receive marketing emails from DealFlow."
+        : "Resubscribed. You'll receive trial reminders and product updates.",
+    })
+  }
+
+  return (
+    <div className="card p-5 md:p-6">
+      <SectionHeader
+        title="Email preferences"
+        subtitle="Marketing and trial-reminder emails. Transactional emails (deal alerts, password resets) are always delivered."
+      />
+      <div className="mt-4 flex items-center justify-between gap-3">
+        <p className="text-navy/80 text-sm">
+          {loading
+            ? 'Loading…'
+            : isUnsubscribed
+            ? 'You are currently unsubscribed from marketing emails.'
+            : 'You are receiving marketing emails.'}
+        </p>
+        <button
+          onClick={toggle}
+          disabled={loading || saving}
+          className="text-xs font-semibold text-muted hover:text-navy underline underline-offset-4 decoration-muted/40 hover:decoration-navy disabled:opacity-50 shrink-0 transition-colors"
+        >
+          {saving
+            ? '…'
+            : isUnsubscribed
+            ? 'Resubscribe'
+            : 'Unsubscribe'}
+        </button>
+      </div>
+      {msg && (
+        <p className={`text-xs mt-3 ${msg.type === 'ok' ? 'text-emerald-700' : 'text-red-600'}`}>
+          {msg.text}
+        </p>
       )}
     </div>
   )

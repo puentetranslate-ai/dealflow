@@ -43,6 +43,14 @@ ALTER TABLE public.profiles
   ADD COLUMN IF NOT EXISTS day15_sent_at timestamptz,
   ADD COLUMN IF NOT EXISTS day25_sent_at timestamptz;
 
+-- CAN-SPAM opt-out timestamp. Set by:
+--   - api/unsubscribe.js when a recipient clicks the email-link
+--   - the Settings → Email preferences card (direct supabase update)
+-- The cron filters out rows where this is non-null so unsubscribed
+-- users skip the day-7/15/25 sequence. NULL means "still opted in".
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS marketing_emails_unsubscribed_at timestamptz;
+
 -- Stripe linkage. stripe_customer_id is captured on first checkout.session
 -- and used as the primary lookup key for subsequent subscription/invoice
 -- webhooks (avoids the much slower email match path).

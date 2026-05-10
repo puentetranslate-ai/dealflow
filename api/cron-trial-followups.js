@@ -64,7 +64,11 @@ export default async function handler(req, res) {
   try {
     const r = await fetch(
       `${SUPABASE_URL}/rest/v1/profiles?select=id,trial_started_at,day7_sent_at,day15_sent_at,day25_sent_at` +
-      `&subscription_status=eq.trial&trial_started_at=not.is.null`,
+      `&subscription_status=eq.trial&trial_started_at=not.is.null` +
+      // Skip users who unsubscribed — either through Settings or via an
+      // email link. Honors CAN-SPAM § 7704(a)(4) (no commercial email
+      // after opt-out) and Gmail/Outlook one-click unsubscribe events.
+      `&marketing_emails_unsubscribed_at=is.null`,
       { headers: { Authorization: `Bearer ${serviceKey}`, apikey: serviceKey } }
     )
     if (!r.ok) {

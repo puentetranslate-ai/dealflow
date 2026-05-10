@@ -24,11 +24,13 @@
 // Response: { success, id?, error? }
 
 import { timingSafeEqual } from 'node:crypto'
+import { buildUnsubscribeUrl } from './unsubscribe.js'
 
 const RESEND_URL = 'https://api.resend.com/emails'
 const DEFAULT_FROM = 'DealFlow Operations <noreply@mail.dealflownow.net>'
 const SUPABASE_URL = 'https://xmylqfkwigpgrkpfzvfq.supabase.co'
 const STRIPE_LINK = 'https://buy.stripe.com/cNiaEYgBtaIDePBac93F602'
+const PUBLIC_ORIGIN = 'https://dealflownow.net'
 
 const VALID_DAYS = new Set([7, 15, 25])
 
@@ -111,7 +113,8 @@ export default async function handler(req, res) {
 
   // ─── Render the email ─────────────────────────────────────────────
   const dayNum = Number(day)
-  const tpl = renderTemplate(dayNum, firstName)
+  const unsubscribeUrl = buildUnsubscribeUrl(userId, expectedToken, PUBLIC_ORIGIN)
+  const tpl = renderTemplate(dayNum, firstName, unsubscribeUrl)
 
   // ─── Send via Resend ──────────────────────────────────────────────
   try {
@@ -127,6 +130,16 @@ export default async function handler(req, res) {
         subject: tpl.subject,
         html: tpl.html,
         text: tpl.text,
+        // RFC 8058 one-click unsubscribe — Gmail / Outlook / Yahoo Mail
+        // render a native "Unsubscribe" chip next to the subject line
+        // when these two headers are present, and POST the unsubscribe
+        // URL when the recipient clicks it. Required by Gmail's bulk
+        // sender guidelines (Feb 2024) for senders >5k/day, and good
+        // for deliverability at any volume.
+        headers: {
+          'List-Unsubscribe': `<${unsubscribeUrl}>, <mailto:unsubscribe@dealflownow.net?subject=Unsubscribe>`,
+          'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+        },
       }),
     })
     if (!resp.ok) {
@@ -204,16 +217,16 @@ function escapeHtml(s) {
 }
 
 // ─────────────────────────── Templates ───────────────────────────
-function renderTemplate(day, firstName) {
+function renderTemplate(day, firstName, unsubscribeUrl) {
   const name = escapeHtml(firstName)
-  if (day === 7)  return renderDay7(name)
-  if (day === 15) return renderDay15(name)
-  if (day === 25) return renderDay25(name)
+  if (day === 7)  return renderDay7(name, unsubscribeUrl)
+  if (day === 15) return renderDay15(name, unsubscribeUrl)
+  if (day === 25) return renderDay25(name, unsubscribeUrl)
   throw new Error(`unknown day ${day}`)
 }
 
 // ── DAY 7 — "Quick check-in" ────────────────────────────────────
-function renderDay7(name) {
+function renderDay7(name, unsubscribeUrl) {
   return {
     subject: "Quick check-in — how's DealFlow working for you?",
     text: `Hi ${name},
@@ -236,9 +249,10 @@ https://dealflownow.net
 DealFlow is operated by Puente Translations LLC
 15238 E Pond Woods Dr · Tampa, FL 33618 · dealflownow.net
 You're receiving this because you started a DealFlow free trial.
-To stop these emails, reply with UNSUBSCRIBE.
+Unsubscribe: ${unsubscribeUrl}
+(or reply with UNSUBSCRIBE)
 `,
-    html: emailShell(`
+    html: emailShell(unsubscribeUrl, `
       <h2 style="color:#0c1e35;font-family:Georgia,'Playfair Display',serif;font-size:24px;margin:0 0 16px;font-weight:700;letter-spacing:-0.3px;">
         Quick check-in
       </h2>
@@ -266,7 +280,7 @@ To stop these emails, reply with UNSUBSCRIBE.
 }
 
 // ── DAY 15 — "Halfway through" ──────────────────────────────────
-function renderDay15(name) {
+function renderDay15(name, unsubscribeUrl) {
   return {
     subject: "You're halfway through your DealFlow trial — here's what successful agents do next",
     text: `Hi ${name},
@@ -291,9 +305,10 @@ https://dealflownow.net
 DealFlow is operated by Puente Translations LLC
 15238 E Pond Woods Dr · Tampa, FL 33618 · dealflownow.net
 You're receiving this because you started a DealFlow free trial.
-To stop these emails, reply with UNSUBSCRIBE.
+Unsubscribe: ${unsubscribeUrl}
+(or reply with UNSUBSCRIBE)
 `,
-    html: emailShell(`
+    html: emailShell(unsubscribeUrl, `
       <h2 style="color:#0c1e35;font-family:Georgia,'Playfair Display',serif;font-size:24px;margin:0 0 16px;font-weight:700;letter-spacing:-0.3px;">
         You're halfway through your trial
       </h2>
@@ -332,7 +347,7 @@ To stop these emails, reply with UNSUBSCRIBE.
 }
 
 // ── DAY 25 — "5 days left" ──────────────────────────────────────
-function renderDay25(name) {
+function renderDay25(name, unsubscribeUrl) {
   return {
     subject: '5 days left — lock in beta pricing now',
     text: `Hi ${name},
@@ -354,9 +369,10 @@ https://dealflownow.net
 DealFlow is operated by Puente Translations LLC
 15238 E Pond Woods Dr · Tampa, FL 33618 · dealflownow.net
 You're receiving this because you started a DealFlow free trial.
-To stop these emails, reply with UNSUBSCRIBE.
+Unsubscribe: ${unsubscribeUrl}
+(or reply with UNSUBSCRIBE)
 `,
-    html: emailShell(`
+    html: emailShell(unsubscribeUrl, `
       <div style="text-align:center;margin:0 0 8px;">
         <span style="display:inline-block;background:#0c1e35;color:#c9a84c;padding:6px 14px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;">
           5 days left
@@ -406,11 +422,11 @@ To stop these emails, reply with UNSUBSCRIBE.
 
 // ── Shared HTML chrome (matches send-welcome-email.js) ──────────
 // Footer includes the CAN-SPAM § 5 essentials: (a) valid physical
-// postal address, (b) sender identity, (c) opt-out instruction.
-// We use a reply-based opt-out because we don't yet host a one-click
-// unsubscribe endpoint — replying "UNSUBSCRIBE" gets the message into
-// our Resend inbox where we can mark the address suppressed.
-function emailShell(inner) {
+// postal address, (b) sender identity, (c) one-click opt-out via a
+// signed unsubscribe URL (+ a fallback reply-based path). Each
+// recipient gets a unique URL — the token is HMAC-signed so it can't
+// be tampered with or used to unsubscribe a different account.
+function emailShell(unsubscribeUrl, inner) {
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width"></head>
@@ -430,7 +446,10 @@ function emailShell(inner) {
         15238 E Pond Woods Dr &middot; Tampa, FL 33618<br/>
         <a href="https://dealflownow.net" style="color:#c9a84c;text-decoration:none;">dealflownow.net</a>
         <br/>
-        <span style="opacity:0.75;">You're receiving this because you started a DealFlow free trial. To stop receiving these emails, reply with "UNSUBSCRIBE" and we'll remove you within 24 hours.</span>
+        <span style="opacity:0.75;">You're receiving this because you started a DealFlow free trial.</span>
+        <br/>
+        <a href="${unsubscribeUrl}" style="color:#c9a84c;text-decoration:underline;">Unsubscribe</a>
+        <span style="opacity:0.5;"> &middot; or reply with UNSUBSCRIBE</span>
       </p>
     </div>
   </div>
