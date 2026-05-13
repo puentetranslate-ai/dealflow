@@ -1,11 +1,13 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from './AuthContext'
+import { useTrial } from './TrialContext'
 
-// Centralizes paid-tier gating. Reads `profiles.subscription_tier` and
-// `profiles.subscription_status`, exposes a useSubscription() hook with
-// boolean tier-checks so feature components don't have to reimplement
-// the active-status logic.
+// Centralizes paid-tier + trial-state gating. Reads
+// `profiles.subscription_tier` and `profiles.subscription_status` from
+// Supabase, combines them with the trial countdown from TrialContext,
+// and exposes a useSubscription() hook with boolean tier-checks so
+// feature components don't have to reimplement the access logic.
 //
 // Tiers (DB column subscription_tier):
 //   - 'beta'         (default for trial / current free users)
@@ -16,10 +18,20 @@ import { useAuth } from './AuthContext'
 // Status (DB column subscription_status):
 //   - 'trial' | 'active' | 'cancelled' | 'expired'
 //
-// A tier flag like isProOrHigher() returns true ONLY if status === 'active'.
-// A user whose subscription_tier was set to 'pro' but whose payment lapsed
-// (status='cancelled' or 'expired') is treated as un-paid — they'll see
-// the upgrade prompt again until they reactivate.
+// Two separate semantic checks are exposed:
+//
+//   isProOrHigher() etc. — "does the user have access to this feature?"
+//     Returns true if they've paid for the tier OR they're in their
+//     30-day app trial (where everything is unlocked by design — no
+//     credit card needed to try Pro features). After trial expires,
+//     this falls back to the strict paid check.
+//
+//   isPaid() — "is this person paying us money?"
+//     Returns true only when status === 'active' AND tier is Pro+.
+//     Used by UI that needs to differentiate paying customers from
+//     trial users (e.g. show "Manage Subscription" vs "Free Trial").
+//     A user whose tier was set to 'pro' but whose payment lapsed
+//     (status='cancelled'/'expired') is treated as un-paid.
 
 const TIER_RANK = {
   beta: 0,
@@ -34,6 +46,8 @@ const NEUTRAL_STATE = {
   loading: true,
   tier: null,
   status: null,
+  isTrialActive: false,
+  isPaid: () => false,
   isProOrHigher: () => false,
   isProPlusOrHigher: () => false,
   isIntelligence: () => false,
@@ -41,19 +55,18 @@ const NEUTRAL_STATE = {
 
 export function SubscriptionProvider({ children }) {
   const { user } = useAuth()
-  const [state, setState] = useState(NEUTRAL_STATE)
+  const trial = useTrial()
+  const [profile, setProfile] = useState({ tier: null, status: null, loaded: false })
 
   useEffect(() => {
     let cancelled = false
 
     if (!user) {
-      // Logged-out callers see the neutral, locked-down state. Public
-      // routes (landing, client portal token route) don't read this.
-      setState({ ...NEUTRAL_STATE, loading: false })
+      setProfile({ tier: null, status: null, loaded: true })
       return
     }
 
-    setState((s) => ({ ...s, loading: true }))
+    setProfile((p) => ({ ...p, loaded: false }))
 
     supabase
       .from('profiles')
@@ -63,20 +76,29 @@ export function SubscriptionProvider({ children }) {
       .then(({ data, error }) => {
         if (cancelled) return
         if (error || !data) {
-          // Profile row missing — treat as unpaid trial. Don't lock the
-          // user out completely; they should see the upgrade prompt
-          // (which is the same UX they'd get anyway).
-          setState(buildState({ tier: 'beta', status: 'trial' }))
+          // Profile row missing — treat as a fresh trial. Don't lock the
+          // user out; they should still get the in-trial experience.
+          setProfile({ tier: 'beta', status: 'trial', loaded: true })
           return
         }
-        setState(buildState({
+        setProfile({
           tier: data.subscription_tier || 'beta',
           status: data.subscription_status || 'trial',
-        }))
+          loaded: true,
+        })
       })
 
     return () => { cancelled = true }
   }, [user?.id])
+
+  // Build the state every render — cheap, and ensures helpers always
+  // see the latest trial state (which updates as the day rolls over
+  // without remounting the provider).
+  const loading = !profile.loaded || trial.loading
+  const isTrialActive = !trial.loading && (trial.daysRemaining ?? 0) > 0
+  const state = loading
+    ? { ...NEUTRAL_STATE, loading: true }
+    : buildState({ tier: profile.tier, status: profile.status, isTrialActive })
 
   return (
     <SubscriptionContext.Provider value={state}>
@@ -90,22 +112,28 @@ export function useSubscription() {
 }
 
 // ─────────────────────────── Helpers ───────────────────────────
-function buildState({ tier, status }) {
+function buildState({ tier, status, isTrialActive }) {
   const rank = TIER_RANK[tier] ?? 0
-  // Active means the user's payment is current. Trial / cancelled /
-  // expired all fall back to false even if the tier column was set —
-  // we don't want to grant Pro features to someone whose card got
-  // declined and is in grace period (they should re-upgrade or fix
-  // the payment). The grace_period_ends_at flag is consulted by the
-  // trial gate, not here.
   const active = status === 'active'
+
+  // isPaid is independent of trial — a trial user is NOT paying us yet.
+  const paidPro          = active && rank >= TIER_RANK.pro
+  const paidProPlus      = active && rank >= TIER_RANK.pro_plus
+  const paidIntelligence = active && rank >= TIER_RANK.intelligence
 
   return {
     loading: false,
     tier,
     status,
-    isProOrHigher: () => active && rank >= TIER_RANK.pro,
-    isProPlusOrHigher: () => active && rank >= TIER_RANK.pro_plus,
-    isIntelligence: () => active && rank >= TIER_RANK.intelligence,
+    isTrialActive,
+    isPaid: () => paidPro,
+    // Tier-gated feature checks. Trial users get true on every tier
+    // because the 30-day app trial unlocks everything — no card
+    // required to try Pro/Pro+/Intelligence features. After trial
+    // expires (isTrialActive=false), it falls back to the strict
+    // paid check, so the user has to subscribe to keep access.
+    isProOrHigher:      () => paidPro          || isTrialActive,
+    isProPlusOrHigher:  () => paidProPlus      || isTrialActive,
+    isIntelligence:     () => paidIntelligence || isTrialActive,
   }
 }

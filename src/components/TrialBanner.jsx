@@ -1,19 +1,26 @@
 import { useTrial } from '../context/TrialContext'
 import { useSubscription } from '../context/SubscriptionContext'
-import { PRO_CHECKOUT_URL } from '../lib/upgradeLinks'
-import { ArrowRightIcon } from './Icon'
 
-// Two visual tones based on urgency:
+// Friendly countdown shown while the user's 30-day app trial is winding
+// down. Two visual tones based on urgency:
 //   - days 6-9 → subtle (muted gold-tinted strip)
 //   - days 1-5 → prominent (gold background, navy text)
 // >9 days remaining renders nothing. 0 days is handled by TrialGate.
-// Paid users (Pro+) see nothing regardless of trial state — the
-// trial countdown is irrelevant once they've subscribed.
+//
+// Intentionally has no CTA — during the trial, every feature is
+// unlocked (SubscriptionContext.isProOrHigher returns true while
+// isTrialActive) and we deliberately don't pressure the user to
+// enter a credit card. The trial-end TrialGate is where tier
+// selection + payment collection happen.
 
 export default function TrialBanner() {
   const { loading, daysRemaining } = useTrial()
   const subscription = useSubscription()
-  if (subscription.isProOrHigher()) return null
+  // Paying customers don't need to see the trial countdown at all.
+  // (Trial users themselves should see it even though isProOrHigher
+  // is true for them — that's why we check isPaid() here, not
+  // isProOrHigher().)
+  if (subscription.isPaid()) return null
   if (loading || daysRemaining == null) return null
   if (daysRemaining > 9) return null
   if (daysRemaining <= 0) return null // gate handles this
@@ -23,7 +30,7 @@ export default function TrialBanner() {
 
   return (
     <div
-      className={`mb-4 rounded-2xl px-4 py-3 flex items-center justify-between gap-3 flex-wrap ${
+      className={`mb-4 rounded-2xl px-4 py-3 ${
         prominent
           ? 'bg-gold text-navy shadow-card'
           : 'bg-gold/10 text-navy border border-gold/30'
@@ -34,21 +41,13 @@ export default function TrialBanner() {
         <span className={prominent ? 'text-navy' : 'text-gold-dark'}>
           {daysRemaining} {dayLabel}
         </span>
-        . Add payment to keep access.
+        .{' '}
+        <span className={`font-normal ${prominent ? 'text-navy/80' : 'text-navy/65'}`}>
+          {prominent
+            ? "You'll pick a plan when it ends — no rush yet."
+            : 'Try every feature — no credit card needed today.'}
+        </span>
       </p>
-      <a
-        href={PRO_CHECKOUT_URL}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={`inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider transition-colors ${
-          prominent
-            ? 'text-navy hover:text-navy-light'
-            : 'text-gold-dark hover:text-gold'
-        }`}
-      >
-        Upgrade to Pro
-        <ArrowRightIcon className="w-3.5 h-3.5" />
-      </a>
     </div>
   )
 }

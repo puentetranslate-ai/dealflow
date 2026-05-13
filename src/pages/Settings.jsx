@@ -354,12 +354,16 @@ const TIER_INFO = {
 function SubscriptionCard() {
   const trial = useTrial()
   const sub = useSubscription()
-  const isPaid = sub.isProOrHigher() || sub.isProPlusOrHigher() || sub.isIntelligence()
+  // isPaid() is the "paying customer" check — distinct from the
+  // feature-access checks (isProOrHigher etc.) which also return true
+  // during the trial. Use isPaid for display logic so trial users
+  // don't see "Manage Subscription" wording aimed at paid customers.
+  const isPaid = sub.isPaid()
 
   // Pick the plan label from subscription_tier, falling back to 'beta'
   // for trial users (or any unknown value) so the card never blanks.
   const info = TIER_INFO[sub.tier] || TIER_INFO.beta
-  const planLabel = info.label
+  const planLabel = isPaid ? info.label : 'Free Trial'
   const priceLabel = info.price
 
   // Manual reconcile state — for when a Stripe checkout completed but
@@ -425,11 +429,7 @@ function SubscriptionCard() {
         ) : trial.isExpired ? (
           <span className="badge-pill bg-red-100 text-red-700">Expired</span>
         ) : trial.daysRemaining != null ? (
-          <span className={`badge-pill ${
-            trial.daysRemaining <= 5 ? 'bg-gold/15 text-gold-dark' : 'bg-navy/[0.04] text-navy/70'
-          }`}>
-            {trial.daysRemaining <= 5 ? 'Action needed' : 'Trial'}
-          </span>
+          <span className="badge-pill bg-gold/15 text-gold-dark">Trial</span>
         ) : null}
       </div>
 
@@ -442,7 +442,19 @@ function SubscriptionCard() {
         >
           Manage Subscription
         </a>
+      ) : sub.isTrialActive ? (
+        // Trial user — no card prompt. They pick a plan when the trial
+        // ends (handled by TrialGate); during the trial everything is
+        // unlocked and we deliberately don't pressure them to subscribe.
+        <div className="mt-5 rounded-xl bg-cream/60 border border-navy/[0.06] p-4 text-center">
+          <p className="text-navy/80 text-xs leading-relaxed">
+            Try every feature free for 30 days &mdash; no credit card needed today. You'll pick a plan when your trial ends.
+          </p>
+        </div>
       ) : (
+        // Trial expired without payment — TrialGate normally intercepts
+        // this path, but the Settings page is reachable via direct URL,
+        // so we still show a clear CTA as a fallback.
         <>
           <a
             href={PRO_CHECKOUT_URL}
@@ -450,10 +462,10 @@ function SubscriptionCard() {
             rel="noopener noreferrer"
             className="btn-primary w-full mt-5"
           >
-            Upgrade to Pro — {PRO_PRICE_LABEL}
+            Upgrade to Pro &mdash; {PRO_PRICE_LABEL}
           </a>
           <p className="text-center text-muted text-xs mt-3">
-            Unlock Client Portal &middot; 30-day free trial &middot; Cancel anytime
+            Unlock Client Portal &middot; Cancel anytime
           </p>
         </>
       )}

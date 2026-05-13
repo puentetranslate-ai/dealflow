@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useTrial } from '../context/TrialContext'
 import { useSubscription } from '../context/SubscriptionContext'
-import { PRO_CHECKOUT_URL, PRO_PRICE_LABEL } from '../lib/upgradeLinks'
-import { XIcon, ArrowRightIcon } from './Icon'
+import { XIcon } from './Icon'
 
-// Single hard warning the day before the trial ends. Shows once per session
-// (sessionStorage gate) so it's a real "huh, I should act on this" prompt
-// rather than a constant nag. Paid users (Pro+) never see it.
+// One-time heads-up shown the day before the trial ends. Shows once per
+// session (sessionStorage gate). Intentionally has no upgrade CTA —
+// tier selection happens at the trial-end TrialGate, not here. This
+// modal exists purely so the trial-end screen isn't a surprise.
+// Paying customers never see it.
 
 export default function TrialModal() {
   const { loading, daysRemaining } = useTrial()
@@ -14,7 +15,7 @@ export default function TrialModal() {
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
-    if (subscription.isProOrHigher()) return
+    if (subscription.isPaid()) return
     if (loading) return
     if (daysRemaining !== 1) return
     if (sessionStorage.getItem('trial-1day-shown')) return
@@ -42,7 +43,7 @@ export default function TrialModal() {
       <div className="relative bg-white w-full md:w-[460px] md:max-w-[92vw] rounded-t-3xl md:rounded-3xl shadow-pop animate-fade-in pb-safe md:pb-7 max-h-[90vh] flex flex-col">
         <div className="px-6 pt-6 pb-2 flex items-start justify-between gap-3">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-gold-dark">Last day</p>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-gold-dark">Heads up</p>
             <h3 className="font-display text-xl font-bold text-navy mt-1 leading-tight">
               Your trial ends tomorrow
             </h3>
@@ -57,25 +58,16 @@ export default function TrialModal() {
         </div>
         <div className="px-6 pt-3 pb-6">
           <p className="text-muted text-sm leading-relaxed">
-            Activate your subscription now to keep access to your deals, leads, calendar, and commission tracking. Takes about 30 seconds and you'll never lose data.
+            Tomorrow you'll be asked to pick a plan to keep using DealFlow. No need to do anything today — just letting you know so it's not a surprise.
           </p>
-          <a
-            href={PRO_CHECKOUT_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn-primary w-full mt-5"
-          >
-            Upgrade to Pro
-            <ArrowRightIcon className="w-4 h-4 ml-2" />
-          </a>
-          <p className="text-center text-muted text-xs mt-3">
-            {PRO_PRICE_LABEL} · Cancel anytime
+          <p className="text-muted text-sm leading-relaxed mt-3">
+            Your deals, leads, and clients stay safe either way.
           </p>
           <button
             onClick={() => setOpen(false)}
-            className="block mx-auto mt-2 text-xs text-muted hover:text-navy transition-colors"
+            className="btn-primary w-full mt-5"
           >
-            Remind me later
+            Got it
           </button>
         </div>
       </div>
