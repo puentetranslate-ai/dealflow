@@ -1,24 +1,26 @@
 import { useEffect, useState } from 'react'
 import { useTrial } from '../context/TrialContext'
+import { useSubscription } from '../context/SubscriptionContext'
+import { PRO_CHECKOUT_URL, PRO_PRICE_LABEL } from '../lib/upgradeLinks'
 import { XIcon, ArrowRightIcon } from './Icon'
-
-const STRIPE_URL = 'https://buy.stripe.com/cNiaEYgBtaIDePBac93F602'
 
 // Single hard warning the day before the trial ends. Shows once per session
 // (sessionStorage gate) so it's a real "huh, I should act on this" prompt
-// rather than a constant nag.
+// rather than a constant nag. Paid users (Pro+) never see it.
 
 export default function TrialModal() {
   const { loading, daysRemaining } = useTrial()
+  const subscription = useSubscription()
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
+    if (subscription.isProOrHigher()) return
     if (loading) return
     if (daysRemaining !== 1) return
     if (sessionStorage.getItem('trial-1day-shown')) return
     setOpen(true)
     sessionStorage.setItem('trial-1day-shown', 'true')
-  }, [loading, daysRemaining])
+  }, [loading, daysRemaining, subscription])
 
   useEffect(() => {
     if (!open) return
@@ -58,16 +60,16 @@ export default function TrialModal() {
             Activate your subscription now to keep access to your deals, leads, calendar, and commission tracking. Takes about 30 seconds and you'll never lose data.
           </p>
           <a
-            href={STRIPE_URL}
+            href={PRO_CHECKOUT_URL}
             target="_blank"
             rel="noopener noreferrer"
             className="btn-primary w-full mt-5"
           >
-            Activate Subscription
+            Upgrade to Pro
             <ArrowRightIcon className="w-4 h-4 ml-2" />
           </a>
           <p className="text-center text-muted text-xs mt-3">
-            $30 onboarding fee + $15/month after · Cancel anytime
+            {PRO_PRICE_LABEL} · Cancel anytime
           </p>
           <button
             onClick={() => setOpen(false)}

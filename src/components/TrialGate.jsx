@@ -1,9 +1,9 @@
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useTrial } from '../context/TrialContext'
+import { useSubscription } from '../context/SubscriptionContext'
+import { PRO_CHECKOUT_URL, PRO_PRICE_LABEL } from '../lib/upgradeLinks'
 import { ArrowRightIcon, LogoutIcon, LockIcon } from './Icon'
-
-const STRIPE_URL = 'https://buy.stripe.com/cNiaEYgBtaIDePBac93F602'
 
 // Full-screen lock shown when the trial has expired (daysRemaining <= 0).
 // Wraps protected page content via AppLayout — when active, the user
@@ -11,12 +11,18 @@ const STRIPE_URL = 'https://buy.stripe.com/cNiaEYgBtaIDePBac93F602'
 //
 // Sign-out remains available so the agent isn't trapped if the wrong
 // account is signed in.
+//
+// Paid subscribers (Pro+) bypass this gate entirely, even if their
+// trial clock ran out — what matters for paid users is the
+// subscription state, not the trial countdown.
 
 export default function TrialGate({ children }) {
   const { loading, isExpired } = useTrial()
+  const subscription = useSubscription()
   const { signOut } = useAuth()
   const navigate = useNavigate()
 
+  if (subscription.isProOrHigher()) return children
   if (loading || !isExpired) return children
 
   const handleSignOut = async () => {
@@ -41,16 +47,16 @@ export default function TrialGate({ children }) {
         </p>
 
         <a
-          href={STRIPE_URL}
+          href={PRO_CHECKOUT_URL}
           target="_blank"
           rel="noopener noreferrer"
           className="btn-primary w-full mt-6"
         >
-          Activate Subscription
+          Upgrade to Pro
           <ArrowRightIcon className="w-4 h-4 ml-2" />
         </a>
         <p className="text-muted text-xs mt-3">
-          $30 onboarding fee + $15/month after · Cancel anytime
+          {PRO_PRICE_LABEL} · Cancel anytime
         </p>
 
         <button

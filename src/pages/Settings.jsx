@@ -362,6 +362,43 @@ function SubscriptionCard() {
   const planLabel = info.label
   const priceLabel = info.price
 
+  // Manual reconcile state — for when a Stripe checkout completed but
+  // the webhook didn't reach us (network blip, mis-configured endpoint,
+  // race condition). Hits /api/sync-subscription which queries Stripe
+  // and writes the correct state to the profile.
+  const [syncing, setSyncing] = useState(false)
+  const [syncMsg, setSyncMsg] = useState(null)
+
+  const handleSync = async () => {
+    setSyncing(true)
+    setSyncMsg(null)
+    try {
+      const { data } = await supabase.auth.getSession()
+      const token = data?.session?.access_token
+      if (!token) {
+        setSyncMsg({ type: 'error', text: 'Sign in again, then retry.' })
+        setSyncing(false)
+        return
+      }
+      const resp = await fetch('/api/sync-subscription', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const json = await resp.json().catch(() => ({}))
+      if (!resp.ok || !json?.ok) {
+        setSyncMsg({ type: 'error', text: json?.error || `Sync failed (${resp.status}).` })
+      } else if (json.found) {
+        setSyncMsg({ type: 'ok', text: json.message || `Updated to ${json.tier}. Refresh the page to see Pro features.` })
+      } else {
+        setSyncMsg({ type: 'info', text: json.message || 'No active Stripe subscription found for your email.' })
+      }
+    } catch (e) {
+      setSyncMsg({ type: 'error', text: e.message || 'Sync failed.' })
+    } finally {
+      setSyncing(false)
+    }
+  }
+
   // Subline only matters for the trial path — paid users see their price.
   let trialSub = ''
   if (trial.loading) {
@@ -420,6 +457,36 @@ function SubscriptionCard() {
           </p>
         </>
       )}
+
+      {/* Manual sync — escape hatch when webhooks don't fire */}
+      <div className="mt-4 pt-4 border-t border-navy/[0.05]">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-muted text-xs leading-snug">
+            Paid but still seeing the upgrade prompt?<br />
+            Sync your subscription state from Stripe.
+          </p>
+          <button
+            onClick={handleSync}
+            disabled={syncing}
+            className="text-xs font-semibold text-muted hover:text-navy underline underline-offset-4 decoration-muted/40 hover:decoration-navy disabled:opacity-50 shrink-0 transition-colors"
+          >
+            {syncing ? 'Syncing…' : 'Refresh status'}
+          </button>
+        </div>
+        {syncMsg && (
+          <p
+            className={`text-xs mt-2 leading-snug ${
+              syncMsg.type === 'ok'
+                ? 'text-emerald-700'
+                : syncMsg.type === 'error'
+                ? 'text-red-600'
+                : 'text-navy/70'
+            }`}
+          >
+            {syncMsg.text}
+          </p>
+        )}
+      </div>
     </div>
   )
 }

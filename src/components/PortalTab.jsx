@@ -203,7 +203,6 @@ export default function PortalTab({ deal, onUnreadChange }) {
         {error && (
           <p className="text-red-500 text-sm mt-4">{error}</p>
         )}
-        <p className="badge-gold mt-6">Pro feature — upgrade to share portals with clients</p>
       </div>
     )
   }

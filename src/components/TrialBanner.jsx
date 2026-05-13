@@ -1,15 +1,19 @@
 import { useTrial } from '../context/TrialContext'
+import { useSubscription } from '../context/SubscriptionContext'
+import { PRO_CHECKOUT_URL } from '../lib/upgradeLinks'
 import { ArrowRightIcon } from './Icon'
-
-const STRIPE_URL = 'https://buy.stripe.com/cNiaEYgBtaIDePBac93F602'
 
 // Two visual tones based on urgency:
 //   - days 6-9 → subtle (muted gold-tinted strip)
 //   - days 1-5 → prominent (gold background, navy text)
 // >9 days remaining renders nothing. 0 days is handled by TrialGate.
+// Paid users (Pro+) see nothing regardless of trial state — the
+// trial countdown is irrelevant once they've subscribed.
 
 export default function TrialBanner() {
   const { loading, daysRemaining } = useTrial()
+  const subscription = useSubscription()
+  if (subscription.isProOrHigher()) return null
   if (loading || daysRemaining == null) return null
   if (daysRemaining > 9) return null
   if (daysRemaining <= 0) return null // gate handles this
@@ -33,7 +37,7 @@ export default function TrialBanner() {
         . Add payment to keep access.
       </p>
       <a
-        href={STRIPE_URL}
+        href={PRO_CHECKOUT_URL}
         target="_blank"
         rel="noopener noreferrer"
         className={`inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider transition-colors ${
@@ -42,7 +46,7 @@ export default function TrialBanner() {
             : 'text-gold-dark hover:text-gold'
         }`}
       >
-        Activate Subscription
+        Upgrade to Pro
         <ArrowRightIcon className="w-3.5 h-3.5" />
       </a>
     </div>

@@ -164,6 +164,25 @@ async function readRawBody(req) {
   return Buffer.concat(chunks)
 }
 
+// Stripe REST API GET — authenticated via STRIPE_SECRET_KEY. Used by:
+//   - onCheckoutCompleted   to expand line_items (not in default event payload)
+//   - onSubscriptionUpsert  to fetch customer.email when the customer_id
+//                           hasn't been linked to a Supabase profile yet
+// Both call sites are wrapped in try/catch and degrade gracefully if the
+// secret isn't set or the API errors — we'd rather process the event
+// with partial info than drop it entirely.
+async function stripeGet(path, secretKey) {
+  if (!secretKey) throw new Error('stripeGet: missing STRIPE_SECRET_KEY')
+  const resp = await fetch(`https://api.stripe.com/v1${path}`, {
+    headers: { Authorization: `Bearer ${secretKey}` },
+  })
+  if (!resp.ok) {
+    const detail = await resp.text().catch(() => '')
+    throw new Error(`Stripe ${path} returned ${resp.status}: ${detail}`)
+  }
+  return resp.json()
+}
+
 // Stripe's signature format is documented at:
 //   https://stripe.com/docs/webhooks#verify-manually
 // Header looks like `t=1234567890,v1=<hex>,v0=<hex>` and may include
@@ -204,9 +223,12 @@ function verifyStripeSignature(rawBody, header, secret) {
 
 // ─────────────────────────── Event handlers ───────────────────────────
 
-// On checkout completion, the user has paid. Mark them active and capture
-// their stripe_customer_id so future events can be looked up by ID, not
-// email. Returns the resolved user_id (or null if we couldn't match).
+// On checkout completion, the user has paid. Mark them active, capture
+// their stripe_customer_id, AND set subscription_tier directly by
+// expanding line_items off the session (rather than waiting for the
+// subsequent customer.subscription.created event — which can race or
+// fail to match if it arrives before stripe_customer_id is stored).
+// Returns the resolved user_id (or null if we couldn't match).
 async function onCheckoutCompleted(serviceKey, session) {
   const email = session?.customer_details?.email || session?.customer_email
   const customerId = session?.customer
@@ -215,9 +237,32 @@ async function onCheckoutCompleted(serviceKey, session) {
     console.warn('[stripe-webhook] checkout: no user match', { email, customerId })
     return null
   }
+
+  // Fetch the session with line_items + price expanded so we can map
+  // straight to a tier on this event. Best-effort: if STRIPE_SECRET_KEY
+  // isn't configured or the API errors, we silently skip the tier set
+  // and let the subscription event handle it later.
+  let tier = null
+  let priceId = null
+  const stripeSecret = process.env.STRIPE_SECRET_KEY
+  if (stripeSecret && session?.id) {
+    try {
+      const full = await stripeGet(
+        `/checkout/sessions/${session.id}?expand[]=line_items.data.price`,
+        stripeSecret
+      )
+      priceId = full?.line_items?.data?.[0]?.price?.id || null
+      tier = priceId ? (PRICE_ID_TO_TIER[priceId] || DEFAULT_TIER) : null
+    } catch (e) {
+      console.warn('[stripe-webhook] checkout: line_items expand failed', e.message)
+    }
+  }
+
   await patchProfile(serviceKey, userId, {
     subscription_status: 'active',
     ...(customerId ? { stripe_customer_id: customerId } : {}),
+    ...(tier ? { subscription_tier: tier } : {}),
+    ...(priceId ? { subscription_price_id: priceId } : {}),
     grace_period_ends_at: null, // clear any prior payment-failure flag
   })
   return userId
@@ -228,7 +273,31 @@ async function onCheckoutCompleted(serviceKey, session) {
 // gets stored so the UI can show "expires Jun 1" without changing status.
 async function onSubscriptionUpsert(serviceKey, sub) {
   const customerId = sub?.customer
-  const userId = await resolveUserId(serviceKey, { customerId })
+  let userId = await resolveUserId(serviceKey, { customerId })
+
+  // Email fallback: if the customer_id lookup failed (which happens when
+  // customer.subscription.created arrives BEFORE checkout.session.completed
+  // has stored the customer_id), fetch the customer from Stripe to get
+  // their email and try matching that way. Best-effort — silently skips
+  // if STRIPE_SECRET_KEY isn't set.
+  if (!userId && customerId) {
+    const stripeSecret = process.env.STRIPE_SECRET_KEY
+    if (stripeSecret) {
+      try {
+        const customer = await stripeGet(`/customers/${customerId}`, stripeSecret)
+        const email = customer?.email
+        if (email) {
+          userId = await resolveUserId(serviceKey, { email })
+          if (userId) {
+            console.log('[stripe-webhook] subscription: matched via email fallback', { customerId, email })
+          }
+        }
+      } catch (e) {
+        console.warn('[stripe-webhook] subscription: customer fetch failed', e.message)
+      }
+    }
+  }
+
   if (!userId) {
     console.warn('[stripe-webhook] subscription update: no user match', { customerId })
     return null
