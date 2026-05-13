@@ -75,20 +75,23 @@ export default function Dashboard() {
   const clearPhaseFilter = () => setSearchParams({})
 
   // Post-upgrade celebration toast — when Stripe redirects back to
-  // /dashboard?upgraded=pro after a successful Pro checkout, show a
-  // one-time confirmation, then strip the query param so a refresh
-  // doesn't re-trigger it.
-  const [showUpgradeToast, setShowUpgradeToast] = useState(false)
+  // /dashboard?upgraded=<tier> after a successful checkout, show a
+  // one-time confirmation tailored to which tier they bought, then
+  // strip the query param so a refresh doesn't re-trigger it.
+  // Recognized tier values: 'pro' (Client Portal unlocked),
+  // 'core' (full transaction suite, no Portal yet).
+  const [upgradedTier, setUpgradedTier] = useState(null)
   useEffect(() => {
-    if (searchParams.get('upgraded') !== 'pro') return
-    setShowUpgradeToast(true)
+    const upgraded = searchParams.get('upgraded')
+    if (upgraded !== 'pro' && upgraded !== 'core') return
+    setUpgradedTier(upgraded)
     // Remove the query param without leaving a history entry — the
-    // Back button shouldn't take the user to a "?upgraded=pro" URL
+    // Back button shouldn't take the user to a "?upgraded=..." URL
     // they've already dismissed.
     const next = new URLSearchParams(searchParams)
     next.delete('upgraded')
     setSearchParams(next, { replace: true })
-    const dismissTimer = setTimeout(() => setShowUpgradeToast(false), 5000)
+    const dismissTimer = setTimeout(() => setUpgradedTier(null), 5000)
     return () => clearTimeout(dismissTimer)
     // We only want this to fire on initial mount with the param present,
     // not on every searchParams change (that would loop forever).
@@ -236,7 +239,7 @@ export default function Dashboard() {
       <WelcomeModal userId={user.id} firstName={firstName} />
 
       {/* ── Post-upgrade celebration toast ── */}
-      {showUpgradeToast && (
+      {upgradedTier && (
         <div
           role="status"
           aria-live="polite"
@@ -247,14 +250,19 @@ export default function Dashboard() {
           <span className="text-2xl leading-none mt-0.5" aria-hidden="true">🎉</span>
           <div className="flex-1 min-w-0">
             <p className="font-display text-sm md:text-base font-bold">
-              Welcome to DealFlow <span className="text-gold">Pro!</span>
+              Welcome to DealFlow{' '}
+              <span className="text-gold">
+                {upgradedTier === 'pro' ? 'Pro!' : 'Core!'}
+              </span>
             </p>
             <p className="text-white/70 text-xs md:text-sm mt-0.5">
-              Client Portal is now unlocked.
+              {upgradedTier === 'pro'
+                ? 'Client Portal is now unlocked.'
+                : "You're all set — every transaction tool is yours."}
             </p>
           </div>
           <button
-            onClick={() => setShowUpgradeToast(false)}
+            onClick={() => setUpgradedTier(null)}
             aria-label="Dismiss"
             className="text-white/40 hover:text-white shrink-0 -mr-1 -mt-1 p-1"
           >
