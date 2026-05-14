@@ -17,7 +17,6 @@ import { useTrial } from '../context/TrialContext'
 import { useSubscription } from '../context/SubscriptionContext'
 import {
   PRO_CHECKOUT_URL,
-  STRIPE_CUSTOMER_PORTAL_URL,
   PRO_PRICE_LABEL,
 } from '../lib/upgradeLinks'
 
@@ -373,6 +372,43 @@ function SubscriptionCard() {
   const [syncing, setSyncing] = useState(false)
   const [syncMsg, setSyncMsg] = useState(null)
 
+  // Stripe billing portal session — in live mode there's no static portal
+  // URL, each session is created on-the-fly per-customer. The endpoint
+  // looks up the user's stripe_customer_id and returns a temp URL we
+  // redirect to.
+  const [portalLoading, setPortalLoading] = useState(false)
+  const [portalError, setPortalError] = useState(null)
+
+  const handleManageSubscription = async () => {
+    setPortalLoading(true)
+    setPortalError(null)
+    try {
+      const { data } = await supabase.auth.getSession()
+      const token = data?.session?.access_token
+      if (!token) {
+        setPortalError('Sign in again, then retry.')
+        setPortalLoading(false)
+        return
+      }
+      const resp = await fetch('/api/customer-portal', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const json = await resp.json().catch(() => ({}))
+      if (!resp.ok || !json?.ok) {
+        setPortalError(json?.message || json?.error || `Could not open the billing portal (${resp.status}).`)
+        setPortalLoading(false)
+        return
+      }
+      // Same-tab redirect so Stripe's "Return to merchant" button comes
+      // back to us cleanly instead of leaving an orphan tab.
+      window.location.href = json.url
+    } catch (e) {
+      setPortalError(e.message || 'Could not open the billing portal.')
+      setPortalLoading(false)
+    }
+  }
+
   const handleSync = async () => {
     setSyncing(true)
     setSyncMsg(null)
@@ -434,14 +470,18 @@ function SubscriptionCard() {
       </div>
 
       {isPaid ? (
-        <a
-          href={STRIPE_CUSTOMER_PORTAL_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="btn-outline w-full mt-5"
-        >
-          Manage Subscription
-        </a>
+        <>
+          <button
+            onClick={handleManageSubscription}
+            disabled={portalLoading}
+            className="btn-outline w-full mt-5 disabled:opacity-50"
+          >
+            {portalLoading ? 'Opening Stripe…' : 'Manage Subscription'}
+          </button>
+          {portalError && (
+            <p className="text-xs text-red-600 mt-2 leading-snug">{portalError}</p>
+          )}
+        </>
       ) : sub.isTrialActive ? (
         // Trial user — no card prompt. They pick a plan when the trial
         // ends (handled by TrialGate); during the trial everything is

@@ -14,10 +14,11 @@ export const PRO_CHECKOUT_URL  = 'https://buy.stripe.com/6oUaEY1Gz5oj7n95VT3F603
 // export const PRO_PLUS_CHECKOUT_URL     = '...'
 // export const INTELLIGENCE_CHECKOUT_URL = '...'
 
-// Stripe-hosted Customer Portal — once a user is paid they manage
-// their card / cancel from there. Set this to the Customer Portal
-// link from Stripe Dashboard → Settings → Billing → Customer Portal.
-export const STRIPE_CUSTOMER_PORTAL_URL = 'https://billing.stripe.com/p/login/PLACEHOLDER_CUSTOMER_PORTAL'
+// (Previously: STRIPE_CUSTOMER_PORTAL_URL — removed. Stripe doesn't
+// hand out a static customer-portal URL in live mode; each portal
+// session is created on-demand via the API. The Settings page now
+// hits /api/customer-portal to create that session and follows the
+// returned URL.)
 
 // Pricing copy — keep in sync with the Stripe price configuration so
 // the paywall numbers don't drift from what the user actually pays.
