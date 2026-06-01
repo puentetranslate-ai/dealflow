@@ -17,6 +17,8 @@ import { ArrowRightIcon, BellIcon, FunnelIcon, XIcon, HouseIcon } from '../compo
 import ShowingCard from '../components/ShowingCard'
 import WelcomeModal from '../components/WelcomeModal'
 import TrialBanner from '../components/TrialBanner'
+import OnboardingWizard from '../components/OnboardingWizard'
+import { useOnboarding } from '../hooks/useOnboarding'
 import { runDailyNotificationCheck } from '../lib/pushNotifications'
 
 const SORT_OPTIONS = [
@@ -60,6 +62,16 @@ export default function Dashboard() {
   const [error, setError] = useState(null)
   const [filter, setFilter] = useState('all')
   const [sort, setSort] = useState('created_desc')
+
+  // First-login onboarding wizard — only shown when the user has zero
+  // deals AND hasn't completed/skipped it (localStorage flag). Once
+  // they create their first deal, dealsCount flips and the wizard
+  // never renders again. Additive — purely additional to Dashboard's
+  // existing behavior; if the hook returns false, nothing renders.
+  const { showOnboarding, completeOnboarding, skipOnboarding } = useOnboarding({
+    dealsCount: deals.length,
+    loading,
+  })
   const [search, setSearch] = useState('')
 
   const scrollToTransactions = () => {
@@ -237,6 +249,14 @@ export default function Dashboard() {
   return (
     <AppLayout>
       <WelcomeModal userId={user.id} firstName={firstName} />
+
+      {/* ── First-login onboarding wizard (only renders when applicable) ── */}
+      {showOnboarding && (
+        <OnboardingWizard
+          onComplete={completeOnboarding}
+          onSkip={skipOnboarding}
+        />
+      )}
 
       {/* ── Post-upgrade celebration toast ── */}
       {upgradedTier && (

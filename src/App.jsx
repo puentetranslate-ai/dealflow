@@ -5,6 +5,9 @@ import { TrialProvider } from './context/TrialContext'
 import { SubscriptionProvider } from './context/SubscriptionContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import Landing from './pages/Landing'
+import Terms from './pages/Terms'
+import Privacy from './pages/Privacy'
+import Pricing from './pages/Pricing'
 import ClientPortal from './pages/ClientPortal'
 import Login from './pages/auth/Login'
 import SignUp from './pages/auth/SignUp'
@@ -36,6 +39,9 @@ export default function App() {
           <Route path="/signup" element={<SignUp />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/pricing" element={<Pricing />} />
+          <Route path="/terms" element={<Terms />} />
+          <Route path="/privacy" element={<Privacy />} />
 
           {/* Public client portal — no auth, gated by RLS via the token */}
           <Route path="/portal/:token" element={<ClientPortal />} />
