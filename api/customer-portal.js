@@ -8,6 +8,11 @@
 // user_id to look up the matching stripe_customer_id on profiles —
 // so a caller can only ever open a portal for THEIR own subscription.
 //
+// If the profile has no stripe_customer_id (e.g. status was set manually
+// via SQL, or a webhook dropped), we fall back to looking the customer
+// up by the verified email in Stripe and cache it back to the profile,
+// so the user never has to manually "Refresh status" first.
+//
 // Required env vars:
 //   SUPABASE_SERVICE_ROLE_KEY   bypasses RLS to read the profile row
 //   STRIPE_SECRET_KEY           creates the portal session
@@ -38,7 +43,7 @@ export default async function handler(req, res) {
   }
   const userToken = authHeader.slice('Bearer '.length)
 
-  let userId
+  let userId, email
   try {
     const meRes = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
       headers: { Authorization: `Bearer ${userToken}`, apikey: serviceKey },
@@ -48,6 +53,7 @@ export default async function handler(req, res) {
     }
     const me = await meRes.json()
     userId = me?.id
+    email = me?.email
     if (!userId) {
       return res.status(401).json({ ok: false, error: 'token-missing-id' })
     }
@@ -75,14 +81,65 @@ export default async function handler(req, res) {
     return res.status(502).json({ ok: false, error: 'profile-lookup-failed' })
   }
 
+  // ── Fallback: resolve customer by email if the profile has no ID ──
+  // Self-heals the common case where Pro was granted via manual SQL or
+  // a webhook dropped, so the user doesn't have to "Refresh status"
+  // first. We pick the most recently-created Stripe customer for this
+  // email and cache the ID back to the profile.
+  if (!stripeCustomerId && email) {
+    try {
+      const search = await stripeGet(
+        `/customers?email=${encodeURIComponent(email)}&limit=10`,
+        stripeSecret
+      )
+      const customers = search?.data || []
+      if (customers.length > 0) {
+        // Prefer a customer that actually has a subscription; otherwise
+        // take the first. Stripe returns newest-first by default.
+        let chosen = customers[0]
+        for (const c of customers) {
+          try {
+            const subs = await stripeGet(
+              `/customers/${c.id}/subscriptions?status=all&limit=1`,
+              stripeSecret
+            )
+            if ((subs?.data || []).length > 0) { chosen = c; break }
+          } catch { /* ignore, fall through to first */ }
+        }
+        stripeCustomerId = chosen.id
+
+        // Best-effort cache back to the profile — non-fatal if it fails.
+        try {
+          await fetch(
+            `${SUPABASE_URL}/rest/v1/profiles?id=eq.${encodeURIComponent(userId)}`,
+            {
+              method: 'PATCH',
+              headers: {
+                Authorization: `Bearer ${serviceKey}`,
+                apikey: serviceKey,
+                'Content-Type': 'application/json',
+                Prefer: 'return=minimal',
+              },
+              body: JSON.stringify({ stripe_customer_id: stripeCustomerId }),
+            }
+          )
+        } catch (e) {
+          console.error('[customer-portal] customer-id cache-back failed', e)
+        }
+        console.log('[customer-portal] resolved customer via email fallback', { userId, email, stripeCustomerId })
+      }
+    } catch (e) {
+      console.error('[customer-portal] email fallback failed', e)
+    }
+  }
+
   if (!stripeCustomerId) {
-    // User doesn't have a Stripe customer linked yet — this can happen
-    // if their subscription_status was set manually (e.g. via SQL) or
-    // if a webhook dropped. Direct them at the self-heal flow.
+    // Still nothing — the user genuinely has no Stripe customer (never
+    // checked out, or paid under a different email).
     return res.status(400).json({
       ok: false,
       error: 'no-stripe-customer',
-      message: 'No Stripe customer record is linked to your account yet. Click "Refresh status" first to sync from Stripe, then try again.',
+      message: 'We could not find a Stripe subscription linked to your email. If you paid with a different email, contact support@dealflownow.net.',
     })
   }
 
@@ -118,4 +175,16 @@ export default async function handler(req, res) {
     console.error('[customer-portal] session creation exception', e)
     return res.status(500).json({ ok: false, error: 'session-creation-failed' })
   }
+}
+
+// ─────────────────────────── Stripe API helper ───────────────────────────
+async function stripeGet(path, secretKey) {
+  const resp = await fetch(`https://api.stripe.com/v1${path}`, {
+    headers: { Authorization: `Bearer ${secretKey}` },
+  })
+  if (!resp.ok) {
+    const detail = await resp.text().catch(() => '')
+    throw new Error(`Stripe ${path} returned ${resp.status}: ${detail}`)
+  }
+  return resp.json()
 }
